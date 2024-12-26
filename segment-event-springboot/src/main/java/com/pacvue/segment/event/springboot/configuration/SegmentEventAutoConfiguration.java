@@ -3,6 +3,7 @@ package com.pacvue.segment.event.springboot.configuration;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
+import com.pacvue.segment.event.core.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.spring.client.SpringSegmentEventClientRegistry;
@@ -15,6 +16,7 @@ import com.pacvue.segment.event.store.Store;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 })
 public class SegmentEventAutoConfiguration {
     @Bean
+    @ConditionalOnMissingBean
     public HttpClient httpClient(SegmentEventClientHttpProperties properties) {
         // 设置 ConnectionProvider 配置
         ConnectionProvider provider = ConnectionProvider.builder("segment-event-client")
@@ -57,6 +60,7 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public SegmentEventClientHttp segmentEventClientHttp(HttpClient httpClient, SegmentEventClientHttpProperties properties) {
         return SegmentEventClientHttp.builder()
                 .httpClient(httpClient)
@@ -67,25 +71,29 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public SegmentEventClientRegistry segmentEventClientRegistry(List<? extends SegmentEventClient> clients) {
         return new SpringSegmentEventClientRegistry(clients);
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry) {
         return SegmentEventReporter.builder().registry(segmentEventClientRegistry).build();
     }
 
     @Bean
-    @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true", matchIfMissing = true)
-    public RabbitMQDistributedStore rabbitMQRemoteStore(RabbitMQRemoteStoreProperties properties) {
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
+    public RabbitMQDistributedStore<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) {
         ConnectionFactory factory = new ConnectionFactory();
 
-        return new RabbitMQDistributedStore(factory, properties.getExchangeName(), properties.getRoutingKey(), properties.getQueueName());
+        return new RabbitMQDistributedStore<>(factory, properties.getExchangeName(), properties.getRoutingKey(), properties.getQueueName());
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store remoteStore) {
-        return SegmentIO.builder().reporter(segmentEventReporter).distributedStore(remoteStore).build();
+    @ConditionalOnMissingBean
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<SegmentEvent> distributedStore) {
+        return SegmentIO.builder().reporter(segmentEventReporter).distributedStore(distributedStore).build();
     }
 }

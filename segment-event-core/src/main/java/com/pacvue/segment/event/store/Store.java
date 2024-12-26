@@ -1,6 +1,5 @@
 package com.pacvue.segment.event.store;
 
-import com.pacvue.segment.event.core.SegmentEvent;
 import reactor.core.publisher.Mono;
 
 import java.util.List;

@@ -1,7 +1,6 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.SerializeUtil;
-import com.pacvue.segment.event.core.SegmentEvent;
 import com.rabbitmq.client.*;
 import lombok.Data;
 import reactor.core.publisher.Mono;
@@ -15,7 +14,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 @Data
-public class RabbitMQDistributedStore implements Store<SegmentEvent> {
+public class RabbitMQDistributedStore<T> implements Store<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -40,7 +39,7 @@ public class RabbitMQDistributedStore implements Store<SegmentEvent> {
     }
 
     // 发布消息
-    public Mono<Boolean> publish(SegmentEvent event) {
+    public Mono<Boolean> publish(T event) {
         return Mono.fromCallable(() -> {
             try {
                 channel.basicPublish(exchangeName, routingKey, null, SerializeUtil.serialize(event));
@@ -53,9 +52,9 @@ public class RabbitMQDistributedStore implements Store<SegmentEvent> {
 
     // 订阅消息
     @Override
-    public void subscribe(Consumer<List<SegmentEvent>> consumer, int consumeCountPer) {
+    public void subscribe(Consumer<List<T>> consumer, int consumeCountPer) {
         try {
-            BatchPollQueue<SegmentEvent> buffer = new BatchPollQueue<>();
+            BatchPollQueue<T> buffer = new BatchPollQueue<>();
             channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
@@ -69,7 +68,7 @@ public class RabbitMQDistributedStore implements Store<SegmentEvent> {
                     if (sig.isHardError()) {
                         System.out.println("Channel closed or lost connection, attempting to reconnect...");
                         while (true) {
-                            List<SegmentEvent> events = buffer.poll(consumeCountPer);
+                            List<T> events = buffer.poll(consumeCountPer);
                             if (events.isEmpty()) {
                                 break;
                             }
