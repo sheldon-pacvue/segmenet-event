@@ -1,0 +1,51 @@
+# IntelliJ IDEA 项目设置文件夹
+.idea/
+
+# 依赖管理文件夹
+**/.mvn/
+target/
+out/
+
+# 编译器生成的文件
+*.class
+*.jar
+*.war
+*.ear
+
+# 临时文件
+*.log
+*.swp
+*.swo
+*.bak
+
+# Java 相关的文件
+*.iml
+
+# 操作系统相关的文件
+.DS_Store
+Thumbs.db
+
+# 用户特定的配置文件
+*.iws
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/vcs.xml
+.idea/modules.xml
+
+# 缓存文件
+*.lock
+
+# Gradle 和 Maven 相关的文件夹和文件
+.gradle/
+build/
+*.log
+*.zip
+*.tar.gz
+
+# NPM 或 Node.js 项目相关
+node_modules/
+
+# 应用配置文件
+*.env
+.flattened-pom.xml
