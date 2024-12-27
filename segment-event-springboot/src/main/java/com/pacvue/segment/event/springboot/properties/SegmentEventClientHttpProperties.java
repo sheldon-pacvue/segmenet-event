@@ -108,6 +108,6 @@ public class SegmentEventClientHttpProperties {
     /**
      * 登陆态
      */
-    private String secret;
+    private String secret = "123123";
 
 }

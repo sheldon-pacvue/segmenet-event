@@ -68,7 +68,7 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
                 public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
                     // 处理断开连接的逻辑，尝试重新连接
                     if (sig.isHardError()) {
-                        System.out.println("Channel closed or lost connection, attempting to reconnect...");
+                        log.warn("Channel closed or lost connection, attempting to reconnect...");
                         while (true) {
                             List<T> events = buffer.poll(bundleCount);
                             if (events.isEmpty()) {

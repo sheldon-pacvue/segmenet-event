@@ -5,6 +5,7 @@ import com.pacvue.segment.event.core.SegmentEvent;
 import io.netty.handler.codec.http.HttpMethod;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -17,12 +18,18 @@ import java.util.function.Function;
 @Builder
 @RequiredArgsConstructor
 public class SegmentEventClientHttp implements SegmentEventClient {
+    @NonNull
     private final HttpClient httpClient;
+    @NonNull
     private final String method;
+    @NonNull
     private final String uri;
-    private final int retry;
+    @NonNull
+    private final Integer retry;
+    @NonNull
     private final String secret;
     @Builder.Default
+    @NonNull
     private final Function<List<SegmentEvent>, Body> bodyFactory = Body::generate;
 
     @Override

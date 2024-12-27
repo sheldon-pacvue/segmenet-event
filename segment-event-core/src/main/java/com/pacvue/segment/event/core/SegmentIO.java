@@ -32,14 +32,9 @@ public class SegmentIO {
             event.setUserId(userIdContextHolder.getContext());
         }
         return injector.inject(event)
-                .flatMap(e -> {
-                    // 尝试 distributedStore.publish，若失败则尝试 localStore.publish，最后调用 reporter.reportDefault
-                    return Optional.ofNullable(distributedStore)
-                            .map(store -> store.publish(event)
-                                    .onErrorResume(ex -> localStore.publish(event)))
-                            .orElse(localStore.publish(event))
-                            .onErrorResume(ex -> reporter.reportDefault(List.of(event)));
-                });
+                .flatMap(e -> distributedStore.publish(event))
+                .onErrorResume(ex -> localStore.publish(event))
+                .onErrorResume(ex -> reporter.reportDefault(List.of(event)));
     }
 
     private void handleReporter(List<SegmentEvent> events) {
