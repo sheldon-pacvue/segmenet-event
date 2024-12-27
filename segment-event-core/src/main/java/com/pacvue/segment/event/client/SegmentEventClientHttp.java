@@ -1,13 +1,9 @@
 package com.pacvue.segment.event.client;
 
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.pacvue.segment.event.core.SegmentEvent;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.*;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +13,7 @@ import reactor.netty.http.client.HttpClient;
 
 import java.util.Date;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
@@ -33,6 +30,7 @@ public class SegmentEventClientHttp implements SegmentEventClient {
     private final Integer retry;
     @NonNull
     private final String secret;
+    private final Consumer<? super HttpHeaders> headerBuilder;
     @Builder.Default
     @NonNull
     private final Function<List<SegmentEvent>, Mono<String>> bodyJsonFactory = Body::generate;
@@ -44,6 +42,9 @@ public class SegmentEventClientHttp implements SegmentEventClient {
                     headers.add(HttpHeaderNames.AUTHORIZATION, secret);
                     headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     headers.add(HttpHeaderNames.ACCEPT, HttpHeaderValues.APPLICATION_JSON);
+                    if (null != headerBuilder) {
+                        headerBuilder.accept(headers);
+                    }
                 })
                 .request(HttpMethod.valueOf(method)).uri(uri)
                 .send((req, out) -> out.sendString(bodyJsonFactory.apply(events)))
