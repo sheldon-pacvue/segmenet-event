@@ -7,6 +7,7 @@ import com.pacvue.segment.event.core.SegmentEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -46,12 +47,15 @@ public class SegmentEventClientHttp implements SegmentEventClient {
                 })
                 .request(HttpMethod.valueOf(method)).uri(uri)
                 .send((req, out) -> out.sendString(bodyJsonFactory.apply(events)))
-                .response().flatMap(response -> {
-                    if (response.status().code() != 200) {
-                        return Mono.just(false);
+                .responseSingle((response, body) -> {
+                    if (HttpResponseStatus.OK.equals(response.status())) {
+                        return Mono.just(true); // 正常处理
+                    } else {
+                        log.warn("segment event client http send failed, response: {}", response);
+                        return Mono.error(new RuntimeException("HTTP Error: " + response.status())); // 抛出异常
                     }
-                    return Mono.just(true);
-                }).retry(retry);
+                })
+                .retry(retry);
     }
 
     @Data
