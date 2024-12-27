@@ -24,7 +24,7 @@ public class ExampleController {
     public Mono<Integer> hello() {
         Integer context = contextHolder.getContext();
         log.info("controller: {}", contextHolder.getContext());
-        segmentIO.send(Mono::just);
+        segmentIO.deliver(Mono::just);
         log.info("context2: {}", context);
         return Mono.just(context);
     }

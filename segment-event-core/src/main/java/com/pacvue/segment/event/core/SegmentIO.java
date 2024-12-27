@@ -5,7 +5,6 @@ import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -28,11 +27,11 @@ public class SegmentIO {
         return this;
     }
 
-    public void send(SegmentEventInjector injector) {
-        sendNeedSubscribe(injector).subscribe();
+    public void deliver(SegmentEventInjector injector) {
+        deliverReact(injector).subscribe();
     }
 
-    public Mono<Boolean> sendNeedSubscribe(SegmentEventInjector injector) {
+    public Mono<Boolean> deliverReact(SegmentEventInjector injector) {
         SegmentEvent event = new SegmentEvent();
         if (null != userIdContextHolder) {
             event.setUserId(userIdContextHolder.getContext());
@@ -41,6 +40,7 @@ public class SegmentIO {
                 .flatMap(e -> distributedStore.publish(event))
                 .onErrorResume(ex -> localStore.publish(event))
                 .onErrorResume(ex -> reporter.reportDefault(List.of(event)))
+                // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -51,7 +51,8 @@ public class SegmentIO {
                     log.error("consume failed, data: {}", events, throwable);
                     return Mono.empty();
                 })
-                .subscribeOn(Schedulers.parallel())
+                // IO密集型采用Schedulers.boundedElastic
+                .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
     }
 
