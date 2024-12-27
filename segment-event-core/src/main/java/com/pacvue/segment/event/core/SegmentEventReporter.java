@@ -17,6 +17,7 @@ import java.util.List;
 public class SegmentEventReporter {
     @NonNull
     private final SegmentEventClientRegistry registry;
+
     @Builder.Default
     private Class<? extends SegmentEventClient> defaultClientClass = SegmentEventClientHttp.class;
 

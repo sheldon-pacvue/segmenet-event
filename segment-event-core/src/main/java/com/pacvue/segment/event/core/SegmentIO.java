@@ -14,7 +14,7 @@ import java.util.Optional;
 public class SegmentIO {
     private final SegmentEventReporter reporter;
     private final Store<SegmentEvent> distributedStore;
-    private final Store<SegmentEvent> localStore = new ReactorLocalStore<>();
+    private final Store<SegmentEvent> localStore = new ReactorLocalStore<>(10);
     private ContextHolder<Integer> userIdContextHolder;
     private final int bundleCount = 5;
 

@@ -19,12 +19,12 @@ class SegmentIOTest {
         Flux.range(1, 100).subscribeOn(Schedulers.newParallel("test", 4))
                 .subscribe(i -> {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                     log.info("??? {}",i + holder.getContext());
                 });
-        Thread.sleep(10000);
+        Thread.sleep(3000);
     }
 }

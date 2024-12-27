@@ -3,6 +3,7 @@ package com.pacvue.segment.event.store;
 import cn.hutool.core.util.SerializeUtil;
 import com.rabbitmq.client.*;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+@Slf4j
 @Data
 public class RabbitMQDistributedStore<T> implements Store<T> {
     private final String exchangeName;
@@ -52,14 +54,14 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
 
     // 订阅消息
     @Override
-    public void subscribe(Consumer<List<T>> consumer, int consumeCountPer) {
+    public void subscribe(Consumer<List<T>> consumer, int bundleCount) {
         try {
             BatchPollQueue<T> buffer = new BatchPollQueue<>();
             channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
                     buffer.add(SerializeUtil.deserialize(body));
-                    consumer.accept(buffer.poll(consumeCountPer));
+                    wrapConsume(consumer, buffer.poll(bundleCount));
                 }
 
                 @Override
@@ -68,11 +70,11 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
                     if (sig.isHardError()) {
                         System.out.println("Channel closed or lost connection, attempting to reconnect...");
                         while (true) {
-                            List<T> events = buffer.poll(consumeCountPer);
+                            List<T> events = buffer.poll(bundleCount);
                             if (events.isEmpty()) {
                                 break;
                             }
-                            consumer.accept(events);
+                            wrapConsume(consumer, events);
                         }
                     }
                 }
@@ -82,7 +84,14 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
         }
     }
 
-    // 关闭连接
+    public void wrapConsume(Consumer<List<T>> consumer, List<T> data) {
+        try {
+            consumer.accept(data);
+        } catch (Throwable e) {
+            log.error("consume failed, data: {}", data, e);
+        }
+    }
+
     public void close() {
         try {
             if (channel != null) {
