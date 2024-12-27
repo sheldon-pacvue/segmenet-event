@@ -45,11 +45,13 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
         return Mono.fromCallable(() -> {
             try {
                 channel.basicPublish(exchangeName, routingKey, null, SerializeUtil.serialize(event));
+                log.debug("event publish success, event：{}", event);
                 return Boolean.TRUE;
             } catch (IOException e) {
+                log.debug("event publish failed, event：{}", event);
                 throw new RuntimeException("Publishing failed", e);
             }
-        }).subscribeOn(Schedulers.boundedElastic());  // 可以映射为自定义异常
+        });  // 可以映射为自定义异常
     }
 
     // 订阅消息
@@ -84,12 +86,9 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
         }
     }
 
-    public void wrapConsume(Consumer<List<T>> consumer, List<T> data) {
-        try {
-            consumer.accept(data);
-        } catch (Throwable e) {
-            log.error("consume failed, data: {}", data, e);
-        }
+    public void wrapConsume(Consumer<List<T>> consumer, List<T> events) {
+        log.debug("event consume start, events：{}", events);
+        consumer.accept(events);
     }
 
     public void close() {

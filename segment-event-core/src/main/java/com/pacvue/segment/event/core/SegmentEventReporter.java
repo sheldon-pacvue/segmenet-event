@@ -23,7 +23,7 @@ public class SegmentEventReporter {
 
     public Mono<Boolean> report(List<SegmentEvent> events, Class<? extends SegmentEventClient> clazz) {
         SegmentEventClient client = registry.getClient(clazz);
-        return client.send(events).subscribeOn(Schedulers.boundedElastic());
+        return client.send(events);
     }
 
 

@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -15,6 +16,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
+@Slf4j
 @Builder
 @RequiredArgsConstructor
 public class SegmentEventClientHttp implements SegmentEventClient {
@@ -43,11 +45,11 @@ public class SegmentEventClientHttp implements SegmentEventClient {
                 .request(HttpMethod.valueOf(method)).uri(uri)
                 .send((req, out) -> out.sendObject(bodyFactory.apply(events)))
                 .response().flatMap(response -> {
-            if (response.status().code() != 200) {
-                return Mono.just(false);
-            }
-            return Mono.just(true);
-        }).retry(retry);
+                    if (response.status().code() != 200) {
+                        return Mono.just(false);
+                    }
+                    return Mono.just(true);
+                }).retry(retry);
     }
 
     @Data

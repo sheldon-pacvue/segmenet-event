@@ -4,12 +4,14 @@ import com.pacvue.segment.event.holder.ContextHolder;
 import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import lombok.Builder;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
-import java.util.Optional;
 
+@Slf4j
 @Builder
 public class SegmentIO {
     private final SegmentEventReporter reporter;
@@ -26,7 +28,11 @@ public class SegmentIO {
         return this;
     }
 
-    public Mono<Boolean> send(SegmentEventInjector injector) {
+    public void send(SegmentEventInjector injector) {
+        sendNeedSubscribe(injector).subscribe();
+    }
+
+    public Mono<Boolean> sendNeedSubscribe(SegmentEventInjector injector) {
         SegmentEvent event = new SegmentEvent();
         if (null != userIdContextHolder) {
             event.setUserId(userIdContextHolder.getContext());
@@ -34,11 +40,19 @@ public class SegmentIO {
         return injector.inject(event)
                 .flatMap(e -> distributedStore.publish(event))
                 .onErrorResume(ex -> localStore.publish(event))
-                .onErrorResume(ex -> reporter.reportDefault(List.of(event)));
+                .onErrorResume(ex -> reporter.reportDefault(List.of(event)))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private void handleReporter(List<SegmentEvent> events) {
-        reporter.reportDefault(events).subscribeOn(Schedulers.boundedElastic()).subscribe();
+        reporter.reportDefault(events)
+                .doOnSuccess(b -> log.debug("consume success, data: {}, result: {}", events, b))
+                .onErrorResume(throwable -> {
+                    log.error("consume failed, data: {}", events, throwable);
+                    return Mono.empty();
+                })
+                .subscribeOn(Schedulers.parallel())
+                .subscribe();
     }
 
     @FunctionalInterface
