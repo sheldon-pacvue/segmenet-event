@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: segment-event-example
+
+
+segment:
+  event:
+    ## ??rabbit?????????
+    rabbit:
+      store:
+        enabled: true
+        uri: amqp://deploy:deploy@localhost:5672
+        exchangeName: amq.direct
+        routingKey: segment-event-example
+        queueName: segment-event-example
+    client:
+      http:
+        secret: "123123"
+        base-url: "http://localhost:8080"

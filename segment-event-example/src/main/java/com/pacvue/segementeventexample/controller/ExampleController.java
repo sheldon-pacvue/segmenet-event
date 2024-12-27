@@ -1,11 +1,14 @@
 package com.pacvue.segementeventexample.controller;
 
+import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.holder.TtlContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
@@ -27,5 +30,11 @@ public class ExampleController {
         segmentIO.deliver(Mono::just);
         log.info("context2: {}", context);
         return Mono.just(context);
+    }
+
+    @PostMapping("/v1/import")
+    public Mono<Integer> v1Import(@RequestBody SegmentEventClientHttp.Body body) {
+        log.info("import: {}", body);
+        return Mono.just(body.getBatch().size());
     }
 }

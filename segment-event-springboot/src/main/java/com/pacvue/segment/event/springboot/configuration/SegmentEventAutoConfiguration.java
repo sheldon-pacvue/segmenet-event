@@ -19,23 +19,24 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import com.rabbitmq.client.*;
 
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
 @Configuration
-@ConfigurationPropertiesScan(basePackageClasses = {
-        SegmentEventClientHttpProperties.class,
-        SegmentEventClientSocketProperties.class,
-        SegmentEventClientFileProperties.class,
-        RabbitMQRemoteStoreProperties.class,
+@ConfigurationPropertiesScan(basePackages = {
+        "com.pacvue.segment.event.springboot.properties"
 })
 public class SegmentEventAutoConfiguration {
     @Bean
@@ -85,9 +86,9 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
-    public RabbitMQDistributedStore<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) {
+    public RabbitMQDistributedStore<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
         ConnectionFactory factory = new ConnectionFactory();
-
+        factory.setUri(properties.getUri());
         return new RabbitMQDistributedStore<>(factory, properties.getExchangeName(), properties.getRoutingKey(), properties.getQueueName());
     }
 

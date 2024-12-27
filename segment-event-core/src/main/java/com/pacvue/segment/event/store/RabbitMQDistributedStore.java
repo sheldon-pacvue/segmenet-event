@@ -31,10 +31,11 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
         this.routingKey = routingKey;
         this.queueName = queueName;
 
-        try (Connection connection = factory.newConnection();
-             Channel channel = connection.createChannel()) {
-            this.connection = connection;
-            this.channel = channel;
+        try {
+            this.connection = factory.newConnection();
+            this.channel = connection.createChannel();
+            channel.queueDeclare(queueName, false, false, false, null);
+            channel.queueBind(queueName, exchangeName, routingKey);
         } catch (IOException | TimeoutException e) {
             throw new RuntimeException("RabbitMQ connection failed", e);
         }
@@ -88,6 +89,9 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
 
     public void wrapConsume(Consumer<List<T>> consumer, List<T> events) {
         log.debug("event consume start, events：{}", events);
+        if (events.isEmpty()) {
+            return;
+        }
         consumer.accept(events);
     }
 

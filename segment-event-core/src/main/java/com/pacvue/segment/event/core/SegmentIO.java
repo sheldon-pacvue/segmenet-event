@@ -12,7 +12,7 @@ import java.util.List;
 
 @Slf4j
 @Builder
-public class SegmentIO {
+public final class SegmentIO {
     private final SegmentEventReporter reporter;
     private final Store<SegmentEvent> distributedStore;
     private final Store<SegmentEvent> localStore = new ReactorLocalStore<>(10);
