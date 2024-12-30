@@ -21,3 +21,9 @@ segment:
         path: "segment"
         file-name: "1.log"
         max-file-size-mb: 1
+      socket:
+        end-point: "/v1/import"
+        host: "localhost"
+        port: 9090
+        timeout: 10000
+        secret: "123123"

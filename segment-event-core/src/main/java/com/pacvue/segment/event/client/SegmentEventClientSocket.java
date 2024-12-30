@@ -1,5 +1,6 @@
 package com.pacvue.segment.event.client;
 
+import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -10,35 +11,44 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class SegmentEventClientSocket implements SegmentEventClient {
+    private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final static int SOCKET_TIMEOUT = 5;
     // 常量定义
     private static final String DEFAULT_LIB_NAME = "defaultLibrary";
     private static final String DEFAULT_LIB_VERSION = "0.0.0";
+    private final String host;
+    private final int port;
 
-    private final Socket socket;
     @NonNull
     private final String secret;
 
     private final String endPoint;
 
+    private volatile Socket socket;
+    private long lastActivityTime;  // 上次活动时间
 
-    public static Socket createSocket(String host, int port, int connectionTimeout) {
-        return SocketUtil.connect(host, port, connectionTimeout);
-    }
-
-    public SegmentEventClientSocket(Socket socket, String secret, String endPoint) {
-        this.socket = socket;
+    public SegmentEventClientSocket(String host, int port, String secret, String endPoint) {
+        this.host = host;
+        this.port = port;
         this.secret = secret;
         this.endPoint = endPoint;
+        startTimeoutChecker();
     }
 
 
@@ -46,12 +56,35 @@ public class SegmentEventClientSocket implements SegmentEventClient {
     public Mono<Boolean> send(List<SegmentEvent> events) {
         // 向服务端发送消息
         return Mono.fromCallable(() -> {
-                    // 在阻塞调用中发送数据
+                    lastActivityTime = System.currentTimeMillis();
+                    if (null == socket) {
+                        synchronized (this) {
+                            if (null == socket) {
+                                socket = SocketUtil.connect(host, port, 5000);
+                            }
+                        }
+                    }
                     IoUtil.writeUtf8(socket.getOutputStream(), false, createMessage(events));
                     return true;
                 })
                 // 将阻塞调用交由线程池执行
                 .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    // 启动超时检查定时任务
+    private void startTimeoutChecker() {
+        scheduler.scheduleAtFixedRate(() -> {
+            if (null == socket) {
+                return;
+            }
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastActivityTime > TimeUnit.MINUTES.toMillis(SOCKET_TIMEOUT)) {
+                // 超过 5 分钟没有活动，断开连接并通知服务端
+                log.info("No activity for " + SOCKET_TIMEOUT + " minutes. Disconnecting and notifying server.");
+                IoUtil.close(socket);  // 关闭连接
+                socket = null;
+            }
+        }, 0, 1, TimeUnit.MINUTES);  // 每分钟检查一次
     }
 
     protected String createMessage(List<SegmentEvent> events) {
@@ -71,7 +104,6 @@ public class SegmentEventClientSocket implements SegmentEventClient {
         String libVersion = libraryInfo[1];
 
         // 构建请求头
-        String host = socket.getInetAddress().getHostAddress();
         String authorization = Base64.getEncoder().encodeToString((this.secret + ":").getBytes(StandardCharsets.UTF_8));
 
         return HttpMethod.POST + StrUtil.SPACE + endPoint + StrUtil.SPACE + HttpVersion.HTTP_1_1 + "\r\n" +

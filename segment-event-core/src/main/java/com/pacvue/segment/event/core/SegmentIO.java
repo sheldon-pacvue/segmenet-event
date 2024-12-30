@@ -15,13 +15,14 @@ import java.util.List;
 public final class SegmentIO {
     private final SegmentEventReporter reporter;
     private final Store<SegmentEvent> distributedStore;
+    @Builder.Default
     private final Store<SegmentEvent> localStore = new ReactorLocalStore<>(10);
     private ContextHolder<Integer> userIdContextHolder;
     private final int bundleCount = 5;
 
     public SegmentIO startSubscribe() {
         if (null != distributedStore) {
-            distributedStore.subscribe(this::handleReporter, bundleCount);
+            distributedStore.subscribe(list -> list.forEach(localStore::publish), bundleCount);
         }
         localStore.subscribe(this::handleReporter, bundleCount);
         return this;

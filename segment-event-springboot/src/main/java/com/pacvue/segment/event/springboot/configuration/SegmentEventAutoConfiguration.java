@@ -12,6 +12,7 @@ import com.pacvue.segment.event.springboot.properties.SegmentEventClientFileProp
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientHttpProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientSocketProperties;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
+import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -83,6 +84,7 @@ public class SegmentEventAutoConfiguration {
         return SegmentEventReporter.builder().registry(segmentEventClientRegistry).build();
     }
 
+
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
@@ -95,6 +97,9 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<SegmentEvent> distributedStore) {
-        return SegmentIO.builder().reporter(segmentEventReporter).distributedStore(distributedStore).build();
+        return SegmentIO.builder()
+                .reporter(segmentEventReporter)
+                .distributedStore(distributedStore)
+                .build();
     }
 }

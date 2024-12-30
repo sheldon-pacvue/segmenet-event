@@ -14,7 +14,6 @@ public class SegmentEventClientSocketProperties {
 
     private String host;
     private Integer port;
-    private String protocol;
-    private Integer timeout;
     private String endPoint;
+    private String secret;
 }
