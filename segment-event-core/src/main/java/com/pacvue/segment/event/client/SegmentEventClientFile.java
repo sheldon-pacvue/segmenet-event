@@ -45,7 +45,7 @@ public class SegmentEventClientFile implements SegmentEventClient {
         // 检查文件大小，如果超过 100MB，则进行滚动压缩
         if (file.length() >= maxFileSizeMb || focus) {
             File renameFile = null;
-            synchronized (SegmentEventClientFile.class) {
+            synchronized (this) {
                 if (file.length() >= maxFileSizeMb || focus) {
                     log.debug("begin to bundle file: {}", file.getAbsolutePath());
                     renameFile = renameFile(file);
