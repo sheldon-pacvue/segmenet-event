@@ -2,7 +2,6 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
-import cn.hutool.core.util.HashUtil;
 import com.pacvue.segment.event.core.SegmentEvent;
 import reactor.core.publisher.Mono;
 
@@ -11,7 +10,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -33,22 +31,27 @@ public class SegmentEventClientFile implements SegmentEventClient {
     @Override
     public Mono<Boolean> send(List<SegmentEvent> events) {
         return Mono.create(sink -> {
-            // 检查文件大小，如果超过 100MB，则进行滚动压缩
-            if (file.length() >= maxFileSizeMb) {
-                File renameFile = null;
-                synchronized (this) {
-                    if (file.length() >= maxFileSizeMb) {
-                        renameFile = renameFile(file);
-                        startNewFile(path, fileName);
-                    }
-                }
-                compressCurrentFile(renameFile);
-            }
+            bundle(false);
 
             // 写入数据到当前文件
             FileUtil.writeLines(events, file, StandardCharsets.UTF_8, true);
             sink.success(true);
         });
+    }
+
+    private void bundle(boolean focus) {
+        // 检查文件大小，如果超过 100MB，则进行滚动压缩
+        if (file.length() >= maxFileSizeMb || focus) {
+            File renameFile = null;
+            synchronized (this) {
+                if (file.length() >= maxFileSizeMb || focus) {
+                    renameFile = renameFile(file);
+                    startNewFile(path, fileName);
+                }
+            }
+            File zipFile = compressFile(renameFile);
+            afterCompressFile(zipFile);
+        }
     }
 
     // 重命名文件
@@ -65,8 +68,8 @@ public class SegmentEventClientFile implements SegmentEventClient {
 
     // 将当前文件压缩成 .zip 格式
     // 测试下来压缩率大概80%
-    private void compressCurrentFile(File file)  {
-        if (null == file) return;
+    private File compressFile(File file)  {
+        if (null == file) return null;
         String zipFileName = file.getName().replace(".log", ".zip");
         File zipFile = new File(file.getParent(), zipFileName);
 
@@ -86,6 +89,7 @@ public class SegmentEventClientFile implements SegmentEventClient {
 
         // 删除原始文件，压缩后的文件保留
         FileUtil.del(file);
+        return zipFile;
     }
 
     // 创建一个新的文件进行写入
@@ -110,4 +114,12 @@ public class SegmentEventClientFile implements SegmentEventClient {
         }
         this.file = targetFile;
     }
+
+    // 如果应用容器未将数据卷和宿主机器绑定，在容器重启时候最好调用该方法并且实现afterCompressFile，将数据上传到远端，避免数据丢失
+    protected void destroy() {
+        bundle(true);
+    }
+
+    // 预留扩展，如果后续需要对zip文件进行处理，可以通过重写该方法实现，比如将文件上传到S3
+    protected void afterCompressFile(File zipFile) {}
 }
