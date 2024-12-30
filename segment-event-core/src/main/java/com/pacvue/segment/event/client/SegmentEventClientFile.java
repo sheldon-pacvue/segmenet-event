@@ -84,7 +84,7 @@ public class SegmentEventClientFile implements SegmentEventClient {
             }
             zos.closeEntry();
         } catch (IOException e) {
-            throw new RuntimeException("zip file error", e);
+            throw new RuntimeException("zip file error, file: " + zipFile.getAbsolutePath(), e);
         }
 
         // 删除原始文件，压缩后的文件保留
@@ -99,18 +99,18 @@ public class SegmentEventClientFile implements SegmentEventClient {
         if (!targetFile.exists()) {
             // 检查目录是否存在，如果不存在则创建
             if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
-                throw new RuntimeException("create parent dir failed");
+                throw new RuntimeException("create parent dir failed, parent dir: " + targetFile.getParentFile());
             }
             // 创建文件（如果文件不存在）
             targetFile = FileUtil.touch(targetFile);  // 如果文件不存在则创建
         }
 
         if (!targetFile.setReadable(true)) {
-            throw new RuntimeException("target file is not readable");
+            throw new RuntimeException("target file is not readable, file: " + targetFile.getAbsolutePath());
         }
 
         if (!targetFile.setWritable(true)) {
-            throw new RuntimeException("target file is not writable");
+            throw new RuntimeException("target file is not writable， file: " + targetFile.getAbsolutePath());
         }
         this.file = targetFile;
     }
