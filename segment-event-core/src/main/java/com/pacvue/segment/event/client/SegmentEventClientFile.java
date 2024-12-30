@@ -3,6 +3,7 @@ package com.pacvue.segment.event.client;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import com.pacvue.segment.event.core.SegmentEvent;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+@Slf4j
 public class SegmentEventClientFile implements SegmentEventClient {
     private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
@@ -43,8 +45,9 @@ public class SegmentEventClientFile implements SegmentEventClient {
         // 检查文件大小，如果超过 100MB，则进行滚动压缩
         if (file.length() >= maxFileSizeMb || focus) {
             File renameFile = null;
-            synchronized (this) {
+            synchronized (SegmentEventClientFile.class) {
                 if (file.length() >= maxFileSizeMb || focus) {
+                    log.debug("begin to bundle file: {}", file.getAbsolutePath());
                     renameFile = renameFile(file);
                     startNewFile(path, fileName);
                 }
