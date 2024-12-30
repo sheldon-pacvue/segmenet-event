@@ -17,14 +17,16 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public class SegmentEventClientFile implements SegmentEventClient {
-    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024L; // 100MB
+    private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
     private final String path;
     private final String fileName;
+    private final long maxFileSizeMb;
 
-    public SegmentEventClientFile(String path, String fileName) {
+    public SegmentEventClientFile(String path, String fileName, long maxFileSizeMb) {
         this.path = path;
         this.fileName = fileName;
+        this.maxFileSizeMb = maxFileSizeMb * FILE_SIZE_UNIT;
         startNewFile(path, fileName);
     }
 
@@ -32,9 +34,15 @@ public class SegmentEventClientFile implements SegmentEventClient {
     public Mono<Boolean> send(List<SegmentEvent> events) {
         return Mono.create(sink -> {
             // 检查文件大小，如果超过 100MB，则进行滚动压缩
-            if (file.length() >= MAX_FILE_SIZE) {
-                compressCurrentFile();
-                startNewFile(path, fileName);
+            if (file.length() >= maxFileSizeMb) {
+                File renameFile = null;
+                synchronized (this) {
+                    if (file.length() >= maxFileSizeMb) {
+                        renameFile = renameFile(file);
+                        startNewFile(path, fileName);
+                    }
+                }
+                compressCurrentFile(renameFile);
             }
 
             // 写入数据到当前文件
@@ -43,9 +51,23 @@ public class SegmentEventClientFile implements SegmentEventClient {
         });
     }
 
+    // 重命名文件
+    private File renameFile(File file) {
+        String zipFileName = file.getName().replace(".log", "_"  + System.currentTimeMillis()+  ".log");
+
+        // 目标文件路径（重命名）
+        File renamedFile = new File(file.getParent(), zipFileName);
+
+        // 的 move 方法进行重命名
+        FileUtil.move(file, renamedFile, true); // true 表示覆盖同名文件
+        return renamedFile;
+    }
+
     // 将当前文件压缩成 .zip 格式
-    private void compressCurrentFile()  {
-        String zipFileName = file.getName().replace(".txt", "_"  + System.currentTimeMillis()+  ".zip");
+    // 测试下来压缩率大概80%
+    private void compressCurrentFile(File file)  {
+        if (null == file) return;
+        String zipFileName = file.getName().replace(".log", ".zip");
         File zipFile = new File(file.getParent(), zipFileName);
 
         try (FileOutputStream fos = new FileOutputStream(zipFile);

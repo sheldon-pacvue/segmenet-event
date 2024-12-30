@@ -17,3 +17,7 @@ segment:
       http:
         secret: "123123"
         base-url: "http://localhost:8080"
+      file:
+        path: "segment"
+        file-name: "1.log"
+        max-file-size-mb: 1
