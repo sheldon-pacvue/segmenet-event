@@ -2,6 +2,8 @@ package com.pacvue.segementeventexample.controller;
 
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
+import com.pacvue.segment.event.entity.SegmentEventTrace;
+import com.pacvue.segment.event.generator.SegmentEventGenerator;
 import com.pacvue.segment.event.holder.TtlContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,12 +26,18 @@ public class ExampleController {
     @Autowired
     private SegmentIO segmentIO;
 
+    @GetMapping("/503")
+    public Mono<Integer> func503() throws InterruptedException {
+        Thread.sleep(7000);
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable");
+    }
+
 
     @GetMapping("/hello")
     public Mono<Integer> hello() {
         Integer context = contextHolder.getContext();
         log.info("controller: {}", contextHolder.getContext());
-        segmentIO.deliver(Mono::just);
+        segmentIO.trace(clazz -> Mono.just(new SegmentEventTrace()));
         log.info("context2: {}", context);
         return Mono.just(context);
     }

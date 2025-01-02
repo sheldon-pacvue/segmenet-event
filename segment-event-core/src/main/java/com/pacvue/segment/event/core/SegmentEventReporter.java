@@ -3,6 +3,7 @@ package com.pacvue.segment.event.core;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;

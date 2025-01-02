@@ -3,7 +3,7 @@ import cn.hutool.core.io.IoUtil;
 import cn.hutool.socket.SocketUtil;
 import com.pacvue.segementeventexample.SegmentEventExampleApplication;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
-import com.pacvue.segment.event.core.SegmentEvent;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 

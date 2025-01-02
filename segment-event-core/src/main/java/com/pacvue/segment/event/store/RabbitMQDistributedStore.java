@@ -1,7 +1,6 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.SerializeUtil;
-import com.pacvue.segment.event.core.SegmentEvent;
 import com.rabbitmq.client.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

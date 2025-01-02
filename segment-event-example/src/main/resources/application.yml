@@ -1,6 +1,7 @@
 spring:
   application:
     name: segment-event-example
+    port: 9090
 
 
 segment:

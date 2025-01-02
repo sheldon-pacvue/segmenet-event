@@ -2,7 +2,7 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
-import com.pacvue.segment.event.core.SegmentEvent;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import io.netty.handler.codec.http.*;
 import lombok.*;
 import lombok.experimental.Accessors;

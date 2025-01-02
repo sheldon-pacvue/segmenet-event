@@ -1,5 +1,7 @@
 package com.pacvue.segment.event.core;
 
+import com.pacvue.segment.event.entity.*;
+import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.holder.ContextHolder;
 import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
@@ -20,7 +22,7 @@ public final class SegmentIO {
     private ContextHolder<Integer> userIdContextHolder;
     private final int bundleCount = 5;
 
-    public SegmentIO startSubscribe() {
+    public SegmentIO start() {
         if (null != distributedStore) {
             distributedStore.subscribe(list -> list.forEach(localStore::publish), bundleCount);
         }
@@ -28,19 +30,41 @@ public final class SegmentIO {
         return this;
     }
 
-    public void deliver(SegmentEventInjector injector) {
-        deliverReact(injector).subscribe();
+    public void trace(SegmentEventGenerator<SegmentEventTrace> generator) {
+        deliver(generator, SegmentEventTrace.class);
     }
 
-    public Mono<Boolean> deliverReact(SegmentEventInjector injector) {
-        SegmentEvent event = new SegmentEvent();
-        if (null != userIdContextHolder) {
-            event.setUserId(userIdContextHolder.getContext());
-        }
-        return injector.inject(event)
-                .flatMap(e -> distributedStore.publish(event))
-                .onErrorResume(ex -> localStore.publish(event))
-                .onErrorResume(ex -> reporter.reportDefault(List.of(event)))
+    public void identify(SegmentEventGenerator<SegmentEventIdentify> generator) {
+        deliver(generator, SegmentEventIdentify.class);
+    }
+
+    public void group(SegmentEventGenerator<SegmentEventGroup> generator) {
+        deliver(generator, SegmentEventGroup.class);
+    }
+
+    public void page(SegmentEventGenerator<SegmentEventPage> generator) {
+        deliver(generator, SegmentEventPage.class);
+    }
+
+    public void screen(SegmentEventGenerator<SegmentEventScreen> generator) {
+        deliver(generator, SegmentEventScreen.class);
+    }
+
+    public <T extends SegmentEvent> void deliver(SegmentEventGenerator<T> generator, Class<T> clazz) {
+        deliverReact(generator, clazz).subscribe();
+    }
+
+    public <T extends SegmentEvent> Mono<Boolean> deliverReact(SegmentEventGenerator<T> generator, Class<T> clazz) {
+        return generator.generate(clazz)
+                .flatMap(event -> {
+                    // 使用 Mono.defer 来延迟执行
+                    // 尝试分布式贮藏
+                    return Mono.defer(() -> distributedStore.publish(event))
+                            // 如果分布式存储失败，尝试本地存储
+                            .onErrorResume(ex -> localStore.publish(event))
+                            // 如果本地存储失败，尝试默认报告
+                            .onErrorResume(ex -> reporter.reportDefault(List.of(event)));
+                })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -55,10 +79,5 @@ public final class SegmentIO {
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
-    }
-
-    @FunctionalInterface
-    public interface SegmentEventInjector {
-        Mono<SegmentEvent> inject(final SegmentEvent event);
     }
 }

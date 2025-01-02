@@ -2,7 +2,7 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
-import com.pacvue.segment.event.core.SegmentEvent;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 

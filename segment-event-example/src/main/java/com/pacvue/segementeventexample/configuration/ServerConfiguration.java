@@ -4,16 +4,14 @@ import com.pacvue.segementeventexample.filter.RequestHolderFilter;
 import com.pacvue.segment.event.client.SegmentEventClientFile;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
-import com.pacvue.segment.event.core.SegmentEvent;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.holder.TtlContextHolder;
 import com.pacvue.segment.event.springboot.configuration.SegmentEventAutoConfiguration;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientFileProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientSocketProperties;
-import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +53,6 @@ public class ServerConfiguration {
                 .reporter(segmentEventReporter)
                 .userIdContextHolder(contextHolder())
                 .distributedStore(distributedStore)
-                .build().startSubscribe();
+                .build().start();
     }
 }
