@@ -2,27 +2,22 @@ package com.pacvue.segementeventexample.controller;
 
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentEventTrace;
-import com.pacvue.segment.event.generator.SegmentEventGenerator;
-import com.pacvue.segment.event.holder.TtlContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @RestController
 public class ExampleController {
     private static final Logger log = LoggerFactory.getLogger(ExampleController.class);
-
-    @Autowired
-    private TtlContextHolder<ServerHttpRequest> contextHolder;
 
     @Autowired
     private SegmentIO segmentIO;
@@ -35,11 +30,11 @@ public class ExampleController {
 
 
     @GetMapping("/hello")
-    public Mono<Integer> hello() {
-        log.info("context1: {}", contextHolder.getContext());
-        segmentIO.trace(clazz -> Mono.just(new SegmentEventTrace()));
-        log.info("context2: {}", contextHolder.getContext());
-        return Mono.just(-1);
+    public Mono<MultiValueMap<String, String>> hello() {
+        return Mono.deferContextual(ctx -> {
+            ServerWebExchange context = ctx.get(ServerWebExchange.class);
+            return Mono.just(context.getRequest().getQueryParams());
+        });
     }
 
     @PostMapping("/v1/import")

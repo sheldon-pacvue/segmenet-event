@@ -2,7 +2,6 @@ package com.pacvue.segment.event.core;
 
 import com.pacvue.segment.event.entity.*;
 import com.pacvue.segment.event.generator.*;
-import com.pacvue.segment.event.holder.ContextHolder;
 import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import lombok.Builder;

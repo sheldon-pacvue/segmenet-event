@@ -1,16 +1,9 @@
 package com.pacvue.segment.event.spring.filter;
 
-import com.pacvue.segment.event.holder.ContextHolder;
-
 import javax.servlet.*;
 import java.io.IOException;
 
-public class RequestHolderFilter implements Filter {
-    private final ContextHolder<ServletRequest> requestHolder;
-
-    public RequestHolderFilter(ContextHolder<ServletRequest> requestHolder) {
-        this.requestHolder = requestHolder;
-    }
+public class ServletRequestHolderFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -19,11 +12,11 @@ public class RequestHolderFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-        requestHolder.setContext(servletRequest);
         try {
+            ServletRequestHolder.set(servletRequest);
             filterChain.doFilter(servletRequest, servletResponse);
         } finally {
-            requestHolder.setContext(null);
+            ServletRequestHolder.remove();
         }
     }
 
