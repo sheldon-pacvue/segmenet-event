@@ -19,7 +19,6 @@ public final class SegmentIO {
     private final Store<SegmentEvent> distributedStore;
     @Builder.Default
     private final Store<SegmentEvent> localStore = new ReactorLocalStore<>(10);
-    private ContextHolder<Integer> userIdContextHolder;
     private final int bundleCount = 5;
 
     public SegmentIO start() {

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,7 @@ public class ExampleController {
     private static final Logger log = LoggerFactory.getLogger(ExampleController.class);
 
     @Autowired
-    private TtlContextHolder<Integer> contextHolder;
+    private TtlContextHolder<ServerHttpRequest> contextHolder;
 
     @Autowired
     private SegmentIO segmentIO;
@@ -35,11 +36,10 @@ public class ExampleController {
 
     @GetMapping("/hello")
     public Mono<Integer> hello() {
-        Integer context = contextHolder.getContext();
-        log.info("controller: {}", contextHolder.getContext());
+        log.info("context1: {}", contextHolder.getContext());
         segmentIO.trace(clazz -> Mono.just(new SegmentEventTrace()));
-        log.info("context2: {}", context);
-        return Mono.just(context);
+        log.info("context2: {}", contextHolder.getContext());
+        return Mono.just(-1);
     }
 
     @PostMapping("/v1/import")
