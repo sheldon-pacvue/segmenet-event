@@ -13,8 +13,5 @@ public class SegmentEventPrometheusMetricsProperties {
     public final static String PROPERTIES_PREFIX = "segment.event.prometheus.metrics";
 
     private String name = "helium10_segment_async_send_events_total";
-    private String namespace = "namespace";
-    private String subsystem = "subsystem";
-    private String help = "total number of segment event reported";
-    private String[] labels = new String[]{};
+    private String[] tags = new String[]{};
 }

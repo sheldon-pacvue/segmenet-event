@@ -28,3 +28,11 @@ segment:
         port: 9090
         timeout: 10000
         secret: "123123"
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+  endpoint:
+    prometheus:
+      enabled: true

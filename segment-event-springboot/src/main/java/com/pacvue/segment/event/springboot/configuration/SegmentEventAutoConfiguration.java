@@ -7,13 +7,14 @@ import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.metric.MetricsCounter;
-import com.pacvue.segment.event.metric.PrometheusMetricsCounter;
+import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.spring.client.SpringSegmentEventClientRegistry;
 import com.pacvue.segment.event.springboot.properties.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientHttpProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventPrometheusMetricsProperties;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -79,12 +80,9 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public MetricsCounter metricsCounter(SegmentEventPrometheusMetricsProperties properties) {
-        return PrometheusMetricsCounter.builder(properties.getName())
-                .subSystem(properties.getSubsystem())
-                .namespace(properties.getNamespace())
-                .help(properties.getHelp())
-                .labelNames(properties.getLabels())
+    public MetricsCounter metricsCounter(MeterRegistry meterRegistry, SegmentEventPrometheusMetricsProperties properties) {
+        return SpringPrometheusMetricsCounter.builder(meterRegistry, properties.getName())
+                .tags(properties.getTags())
                 .build();
     }
 
