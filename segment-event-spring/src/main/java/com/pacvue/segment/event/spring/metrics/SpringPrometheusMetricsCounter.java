@@ -37,7 +37,6 @@ public class SpringPrometheusMetricsCounter implements MetricsCounter {
         private String[] tags;
 
         public SpringPrometheusMetricsCounter build() {
-            Counter counter = registry.counter(name, tags);
             return new SpringPrometheusMetricsCounter(registry.counter(name, tags));
         }
     }
