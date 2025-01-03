@@ -3,6 +3,7 @@ import cn.hutool.core.io.IoUtil;
 import cn.hutool.socket.SocketUtil;
 import com.pacvue.segementeventexample.SegmentEventExampleApplication;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
+import com.pacvue.segment.event.entity.SegmentEventTrace;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,7 +17,7 @@ public class SocketTest {
     @Test
     public void test() {
         SegmentEventClientSocket segmentEventClientSocket = new SegmentEventClientSocket("localhost", 9090, "123", "/ws/echo");
-        segmentEventClientSocket.send(List.of(new SegmentEvent()))
+        segmentEventClientSocket.send(List.of(new SegmentEventTrace()))
                 .block();
     }
 

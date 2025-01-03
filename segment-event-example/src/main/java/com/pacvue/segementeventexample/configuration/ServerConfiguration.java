@@ -6,6 +6,7 @@ import com.pacvue.segment.event.client.SegmentEventClientSocket;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
+import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.springboot.configuration.SegmentEventAutoConfiguration;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientFileProperties;
@@ -36,8 +37,8 @@ public class ServerConfiguration {
 
 
     @Bean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry) {
-        return SegmentEventReporter.builder().registry(segmentEventClientRegistry).defaultClientClass(SegmentEventClientSocket.class).build();
+    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry, MetricsCounter metricsCounter) {
+        return SegmentEventReporter.builder().registry(segmentEventClientRegistry).metricsCounter(metricsCounter).defaultClientClass(SegmentEventClientSocket.class).build();
     }
 
 
