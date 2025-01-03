@@ -72,7 +72,8 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
         }
     }
 
-    public void close() {
+    @Override
+    public void shutdown() {
         try {
             if (channel != null) {
                 channel.close();

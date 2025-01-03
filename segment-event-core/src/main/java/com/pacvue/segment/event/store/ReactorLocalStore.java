@@ -33,4 +33,9 @@ public class ReactorLocalStore<T> implements Store<T> {
             consumer.accept(events);
         });
     }
+
+    @Override
+    public void shutdown() {
+        sink.tryEmitComplete();
+    }
 }

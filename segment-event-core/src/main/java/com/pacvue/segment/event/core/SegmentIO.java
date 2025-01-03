@@ -6,6 +6,7 @@ import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -16,15 +17,16 @@ import java.util.List;
 public final class SegmentIO {
     private final SegmentEventReporter reporter;
     private final Store<SegmentEvent> distributedStore;
+    private final Store<SegmentEventDataBase<SegmentEvent>> dbStore;
     @Builder.Default
-    private final Store<SegmentEvent> localStore = new ReactorLocalStore<>(10);
+    private final Store<SegmentEvent> bufferStore = new ReactorLocalStore<>(10);
     private final int bundleCount = 5;
 
     public SegmentIO start() {
         if (null != distributedStore) {
-            distributedStore.subscribe(list -> list.forEach(localStore::publish), bundleCount);
+            distributedStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
         }
-        localStore.subscribe(this::handleReporter, bundleCount);
+        bufferStore.subscribe(this::handleReporter, bundleCount);
         return this;
     }
 
@@ -58,10 +60,8 @@ public final class SegmentIO {
                     // 使用 Mono.defer 来延迟执行
                     // 尝试分布式贮藏
                     return Mono.defer(() -> distributedStore.publish(event))
-                            // 如果分布式存储失败，尝试本地存储
-                            .onErrorResume(ex -> localStore.publish(event))
-                            // 如果本地存储失败，尝试默认报告
-                            .onErrorResume(ex -> reporter.reportDefault(List.of(event)));
+                            // 如果分布式存储失败，尝试本地缓冲后直接上报
+                            .onErrorResume(ex -> bufferStore.publish(event));
                 })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic());
@@ -69,10 +69,30 @@ public final class SegmentIO {
 
     private void handleReporter(List<SegmentEvent> events) {
         reporter.reportDefault(events)
-                .doOnSuccess(b -> log.debug("consume success, data: {}, result: {}", events, b))
+                // 如果上报成功将记录成功
+                .doOnSuccess(b -> {
+                    log.debug("consume success, data: {}, result: {}", events, b);
+                    Flux.fromIterable(events)
+                            .flatMap(event -> {
+                                SegmentEventDataBase<SegmentEvent> eventDataBase = new SegmentEventDataBase<>(event, true);
+                                return dbStore.publish(eventDataBase)
+                                        .doOnError(e -> log.error("event report succeed， but failed to log into db: {}", event, e))
+                                        .onErrorResume(e -> Mono.empty());
+                            })
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .subscribe();
+                })
+                // 如果上报失败将存储到数据库中
                 .onErrorResume(throwable -> {
-                    log.error("consume failed, data: {}", events, throwable);
-                    return Mono.empty();
+                    log.warn("batch report failed, switching to single event processing. Error: {}", throwable.getMessage(), throwable);
+                    return Flux.fromIterable(events)
+                            .flatMap(event -> {
+                                SegmentEventDataBase<SegmentEvent> eventDataBase = new SegmentEventDataBase<>(event, false);
+                                return dbStore.publish(eventDataBase)
+                                            .doOnError(e -> log.error("failed to log event: {}", event, e))
+                                            .onErrorResume(e -> Mono.empty());
+                            })
+                            .then(Mono.just(Boolean.TRUE)); // 使用 Mono.just(false) 符合返回类型 Mono<Boolean>
                 })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic())

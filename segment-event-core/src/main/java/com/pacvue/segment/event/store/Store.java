@@ -9,4 +9,6 @@ public interface Store<T> {
     Mono<Boolean> publish(T event);
 
     void subscribe(Consumer<List<T>> consumer, int bundleCount);
+
+    void shutdown();
 }
