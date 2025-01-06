@@ -13,7 +13,6 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @Accessors(chain = true)
 public class SegmentEventScreen extends SegmentEvent {
-    private int userId;
     private String anonymousId;
 
     @Override

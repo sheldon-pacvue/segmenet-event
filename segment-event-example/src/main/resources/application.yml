@@ -3,9 +3,20 @@ spring:
     name: segment-event-example
     port: 9090
 
-
 segment:
   event:
+    clickhouse:
+      store:
+        data-source-properties:
+          druid:
+            driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+            url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
+            username: default
+            password: default
+            validationQuery: SELECT 1
+            testWhileIdle: true
+        table-name: SegmentEventLog
+        enabled: true
     ## ??rabbit?????????
     rabbit:
       store:

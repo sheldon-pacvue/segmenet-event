@@ -1,23 +1,28 @@
 package com.pacvue.segment.event.springboot.configuration;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
+import com.pacvue.segment.event.entity.SegmentEventDataBase;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.spring.client.SpringSegmentEventClientRegistry;
+import com.pacvue.segment.event.springboot.properties.ClickHouseDBStoreProperties;
 import com.pacvue.segment.event.springboot.properties.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientHttpProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventPrometheusMetricsProperties;
+import com.pacvue.segment.event.store.ClickHouseStore;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -27,12 +32,15 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import com.rabbitmq.client.*;
 
+import javax.sql.DataSource;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 
 @Configuration
@@ -94,20 +102,48 @@ public class SegmentEventAutoConfiguration {
 
 
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(name = "distributedStore")
     @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
-    public RabbitMQDistributedStore<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
+    public Store<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUri(properties.getUri());
-        return new RabbitMQDistributedStore<>(factory, properties.getExchangeName(), properties.getRoutingKey(), properties.getQueueName());
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+
+        channel.queueDeclare(properties.getQueueName(), false, false, false, null);
+        channel.queueBind(properties.getQueueName(), properties.getExchangeName(), properties.getRoutingKey());
+
+        return RabbitMQDistributedStore.builder()
+                .connection(connection)
+                .channel(channel)
+                .exchangeName(properties.getExchangeName())
+                .routingKey(properties.getRoutingKey())
+                .queueName(properties.getQueueName())
+                .build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "dbStore")
+    @Qualifier("dbStore")
+    public Store<SegmentEventDataBase<SegmentEvent>> dbStore(ClickHouseDBStoreProperties properties) {
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.configFromPropeties(properties.getDataSourceProperties());
+
+        return ClickHouseStore.builder()
+                .dataSource(dataSource)
+                .tableName(properties.getTableName())
+                .build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<SegmentEvent> distributedStore) {
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+                               @Qualifier("distributedStore") Store<SegmentEvent> distributedStore,
+                               @Qualifier("dbStore") Store<SegmentEventDataBase<SegmentEvent>> dbStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
+                .dbStore(dbStore)
                 .build();
     }
 }

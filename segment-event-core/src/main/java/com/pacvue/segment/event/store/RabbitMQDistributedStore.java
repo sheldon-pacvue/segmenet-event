@@ -1,7 +1,9 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.SerializeUtil;
+import com.pacvue.segment.event.generator.SegmentEvent;
 import com.rabbitmq.client.*;
+import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -13,7 +15,8 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Data
-public class RabbitMQDistributedStore<T> implements Store<T> {
+@Builder
+public class RabbitMQDistributedStore<T extends SegmentEvent> implements Store<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -21,22 +24,6 @@ public class RabbitMQDistributedStore<T> implements Store<T> {
     private final Connection connection;
     private final Channel channel;
 
-
-    // 初始化连接和频道
-    public RabbitMQDistributedStore(ConnectionFactory factory, String exchangeName, String routingKey, String queueName) {
-        this.exchangeName = exchangeName;
-        this.routingKey = routingKey;
-        this.queueName = queueName;
-
-        try {
-            this.connection = factory.newConnection();
-            this.channel = connection.createChannel();
-            channel.queueDeclare(queueName, false, false, false, null);
-            channel.queueBind(queueName, exchangeName, routingKey);
-        } catch (IOException | TimeoutException e) {
-            throw new RuntimeException("RabbitMQ connection failed", e);
-        }
-    }
 
     // 发布消息
     public Mono<Boolean> publish(T event) {

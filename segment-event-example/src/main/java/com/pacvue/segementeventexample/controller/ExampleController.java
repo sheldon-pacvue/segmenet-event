@@ -42,7 +42,7 @@ public class ExampleController {
                 log.info("userId: {}", userId);
 
                 SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-                segmentEventTrace.setUserId(Integer.parseInt(userId));
+                segmentEventTrace.setUserId(userId);
                 return Mono.just(segmentEventTrace);
             }));
             return Mono.just("right");
@@ -62,7 +62,7 @@ public class ExampleController {
             log.info("userId: {}", userId);
 
             SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            segmentEventTrace.setUserId(Integer.parseInt(userId));
+            segmentEventTrace.setUserId(userId);
 
             return Mono.just(segmentEventTrace);
         }), SegmentEventTrace.class))
@@ -82,7 +82,7 @@ public class ExampleController {
             String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
             log.info("userId: {}", userId);
             SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            segmentEventTrace.setUserId(Integer.parseInt(userId));
+            segmentEventTrace.setUserId(userId);
             return Mono.just(segmentEventTrace);
         }));
         return Mono.just("wrong");

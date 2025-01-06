@@ -22,6 +22,7 @@ public abstract class SegmentEvent implements Serializable {
     private final String messageId = Generators.timeBasedEpochRandomGenerator().generate().toString();
     private final long timestamp = System.currentTimeMillis();
     private String event;
+    private String userId;
     private final Map<String, Object> properties = new HashMap<>();
     private final Map<String, Object> context = new HashMap<>();
     private final Map<String, Object> integrations = new HashMap<>();
