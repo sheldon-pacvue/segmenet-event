@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Data
 @Builder
-public class RabbitMQDistributedStore<T extends SegmentEvent> implements Store<T> {
+public class RabbitMQDistributedStore implements Store<Void> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -26,7 +26,7 @@ public class RabbitMQDistributedStore<T extends SegmentEvent> implements Store<T
 
 
     // 发布消息
-    public Mono<Boolean> publish(T event) {
+    public Mono<Boolean> publish(SegmentEvent event, Void v) {
         return Mono.fromCallable(() -> {
             try {
                 channel.basicPublish(exchangeName, routingKey, null, SerializeUtil.serialize(event));
@@ -41,14 +41,14 @@ public class RabbitMQDistributedStore<T extends SegmentEvent> implements Store<T
 
     // 订阅消息
     @Override
-    public void subscribe(Consumer<List<T>> consumer, int bundleCount) {
+    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
         try {
             channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
                     // 为了保留范型适配，这里必须进行类型强转，否则将导致类型转换错误
                     @SuppressWarnings("unchecked")
-                    List<T> eventList = List.of((T) SerializeUtil.deserialize(body));
+                    List<SegmentEvent> eventList = List.of((SegmentEvent) SerializeUtil.deserialize(body));
                     consumer.accept(eventList);
                 }
             });

@@ -10,37 +10,25 @@ import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
-@EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @RequiredArgsConstructor
 @Accessors(chain = true)
-public class SegmentEventDataBase<T extends SegmentEvent> extends SegmentEvent {
+public class SegmentEventOptional {
     public final static int LOG_OPERATION_SEND_TO_DISTRIBUTED_STORE = 1;
     public final static int LOG_OPERATION_SEND_TO_SEGMENT = 2;
 
-    // 消息主体
-    private final T message;
     // 是否上报成功
     private final boolean result;
     // 上报给了队列，还是上报给了平台,由于这里改用了rabbitmq，会自动降级到上报平台，所以这个值基本没用了
     private int operation = LOG_OPERATION_SEND_TO_SEGMENT;
     private long createdAt = System.currentTimeMillis();
 
-    @Override
-    public String getType() {
-        return this.message.getType();
+    public static String toEventDate(long timestamp) {
+        return DateUtil.date(timestamp).toDateStr();
     }
 
-    public long getEventTime() {
-        return this.message.getTimestamp();
-    }
-
-    public String getEventDate() {
-        return DateUtil.date(this.message.getTimestamp()).toDateStr();
-    }
-
-    public String getHash() {
-        return DigestUtil.md5Hex(JSONUtil.toJsonStr(message));
+    public static String toHash(SegmentEvent event) {
+        return DigestUtil.md5Hex(JSONUtil.toJsonStr(event));
     }
 }

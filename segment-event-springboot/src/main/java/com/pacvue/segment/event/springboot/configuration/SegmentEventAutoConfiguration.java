@@ -4,7 +4,7 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
-import com.pacvue.segment.event.entity.SegmentEventDataBase;
+import com.pacvue.segment.event.entity.SegmentEventOptional;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
@@ -32,7 +32,6 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import com.rabbitmq.client.*;
 
-import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
@@ -104,7 +103,7 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "distributedStore")
     @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
-    public Store<SegmentEvent> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    public Store<Void> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUri(properties.getUri());
         Connection connection = factory.newConnection();
@@ -125,7 +124,7 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "dbStore")
     @Qualifier("dbStore")
-    public Store<SegmentEventDataBase<SegmentEvent>> dbStore(ClickHouseDBStoreProperties properties) {
+    public Store<SegmentEventOptional> dbStore(ClickHouseDBStoreProperties properties) {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
 
@@ -138,8 +137,8 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
-                               @Qualifier("distributedStore") Store<SegmentEvent> distributedStore,
-                               @Qualifier("dbStore") Store<SegmentEventDataBase<SegmentEvent>> dbStore) {
+                               @Qualifier("distributedStore") Store<Void> distributedStore,
+                               @Qualifier("dbStore") Store<SegmentEventOptional> dbStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)

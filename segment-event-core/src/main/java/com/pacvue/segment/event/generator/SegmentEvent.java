@@ -26,6 +26,4 @@ public abstract class SegmentEvent implements Serializable {
     private final Map<String, Object> properties = new HashMap<>();
     private final Map<String, Object> context = new HashMap<>();
     private final Map<String, Object> integrations = new HashMap<>();
-
-    public abstract String getType();
 }

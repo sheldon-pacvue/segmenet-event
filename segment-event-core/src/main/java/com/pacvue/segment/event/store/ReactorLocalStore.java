@@ -12,12 +12,12 @@ import java.util.function.Consumer;
 
 @Slf4j
 @RequiredArgsConstructor
-public class ReactorLocalStore<T extends SegmentEvent> implements Store<T> {
-    private final Sinks.Many<T> sink = Sinks.many().multicast().onBackpressureBuffer(); // 外部持有 FluxSink 引用
+public class ReactorLocalStore implements Store<Void> {
+    private final Sinks.Many<SegmentEvent> sink = Sinks.many().multicast().onBackpressureBuffer(); // 外部持有 FluxSink 引用
     private final int bufferTimeoutSeconds;
 
     @Override
-    public Mono<Boolean> publish(T event) {
+    public Mono<Boolean> publish(SegmentEvent event, Void v) {
         Sinks.EmitResult emitResult = sink.tryEmitNext(event);
         if (emitResult.isFailure()) {
             log.debug("event publish failed, event：{}, reason: {}", event, emitResult);
@@ -28,7 +28,7 @@ public class ReactorLocalStore<T extends SegmentEvent> implements Store<T> {
     }
 
     @Override
-    public void subscribe(Consumer<List<T>> consumer, int bundleCount) {
+    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
         sink.asFlux().bufferTimeout(bundleCount, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
             log.debug("event consume start, events：{}", events);
             consumer.accept(events);

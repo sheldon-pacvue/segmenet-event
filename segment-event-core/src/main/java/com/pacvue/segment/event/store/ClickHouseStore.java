@@ -1,7 +1,11 @@
 package com.pacvue.segment.event.store;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
-import com.pacvue.segment.event.entity.SegmentEventDataBase;
+import com.pacvue.segment.event.entity.SegmentEventClassRegistry;
+import com.pacvue.segment.event.entity.SegmentEventOptional;
+import com.pacvue.segment.event.entity.annotation.SegmentEventType;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -11,18 +15,26 @@ import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.sql.*;
 
 @Builder
 @Slf4j
-public class ClickHouseStore<T extends SegmentEvent> implements Store<SegmentEventDataBase<T>> {
+public class ClickHouseStore implements Store<SegmentEventOptional> {
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final DataSource dataSource;
     private final String tableName;
+    @Builder.Default
+    private boolean subscribing = false;
 
-    public ClickHouseStore(DataSource dataSource, String tableName) {
+    public ClickHouseStore(DataSource dataSource, String tableName, boolean subscribing) {
         this.dataSource = dataSource;
         this.tableName = tableName;
+        this.subscribing = subscribing;
         createTableIfNotExists(this.dataSource);
     }
 
@@ -30,12 +42,12 @@ public class ClickHouseStore<T extends SegmentEvent> implements Store<SegmentEve
      * TODO 写入数据库
      */
     @Override
-    public Mono<Boolean> publish(SegmentEventDataBase<T> event) {
+    public Mono<Boolean> publish(SegmentEvent event, SegmentEventOptional optional) {
         try {
             Connection connection = dataSource.getConnection();
             return Mono.defer(() -> {
                 try {
-                    return Mono.just(insertData(connection, List.of(event)));
+                    return Mono.just(insertData(connection, event, optional));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -47,28 +59,32 @@ public class ClickHouseStore<T extends SegmentEvent> implements Store<SegmentEve
 
     /**
      * TODO 从数据库中查询，并且上报，注意分布式问题，使用zookeeper，redis等其他分布式系统进行选举master进行查询上报
-     *
-     * 未发送成功的数据拿出来再发一次
-     * $query = 'SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result, '
-     *             . ' MAX(message) as message, MIN(eventTime) as eventTime FROM ' . SegmentEventsLog::tableName()
-     *             . ' WHERE eventDate >= \'' . $dateFrom . '\' '
-     *             . ' AND operation = ' . SegmentIo::LOG_OPERATION_SEND_TO_SEGMENT
-     *             . ' GROUP BY hash HAVING result = 0 ORDER BY eventTime';
-     *
-     * 没搞懂这个有什么用？
-     * 将在sqs队列中的数据拿出来重发,发完后删除队列的中数据
-     * $query = 'SELECT * FROM ' . SegmentEventsLog::tableName()
-     *             . ' WHERE eventDate = \'' . $date . '\' AND type = \'track\''
-     *             . ' AND operation = ' . SegmentIo::LOG_OPERATION_SEND_TO_SQS;
+     * 需要循环进行查询，直到查询不到数据,睡眠5分钟，然后重试
      */
     @Override
-    public void subscribe(Consumer<List<SegmentEventDataBase<T>>> consumer, int bundleCount) {
-
+    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
+        this.subscribing = true;
+        CompletableFuture.runAsync(() -> {
+            while (subscribing) {
+                try {
+                    List<SegmentEvent> events = queryData(dataSource.getConnection());
+                    if (events.isEmpty()) {
+                        // 如果没有数据，休眠5分钟
+                        TimeUnit.MINUTES.sleep(5);
+                    }
+                    for (SegmentEvent event : events) {
+                        consumer.accept(List.of(event));
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, executorService);
     }
 
     @Override
     public void shutdown() {
-
+        this.subscribing = false;
     }
 
     /**
@@ -102,12 +118,13 @@ public class ClickHouseStore<T extends SegmentEvent> implements Store<SegmentEve
                 return;
             }
             statement.execute(createTableSQL);
+            log.debug("create table success, tableName: {}", tableName);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private boolean insertData(Connection connection, List<SegmentEventDataBase<T> > events) throws Exception {
+    private boolean insertData(Connection connection, SegmentEvent event, SegmentEventOptional optional) {
         // 插入的SQL语句
         String insertSQL = """
             INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
@@ -116,107 +133,57 @@ public class ClickHouseStore<T extends SegmentEvent> implements Store<SegmentEve
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertSQL)) {
             // 插入多条记录
-            for (SegmentEventDataBase<T> event : events) {
-                preparedStatement.setDate(1, Date.valueOf(event.getEventDate()));  // eventDate
-                preparedStatement.setString(2, event.getHash());  // hash
-                preparedStatement.setString(3, event.getUserId());  // userId
-                preparedStatement.setString(4, event.getType());  // type
-                preparedStatement.setString(5, JSONUtil.toJsonStr(event.getMessage()));  // message
-                preparedStatement.setInt(6, event.isResult() ? 1 : 0);  // result (UInt8)
-                preparedStatement.setInt(7, event.getOperation());  // operation
-                preparedStatement.setLong(8, event.getCreatedAt());  // createdAt
-                preparedStatement.setLong(9, event.getEventTime());  // eventTime
-                preparedStatement.addBatch();
-            }
-            int[] result = preparedStatement.executeBatch();
+            preparedStatement.setDate(1, DateUtil.date(event.getTimestamp()).toSqlDate());  // eventDate
+            preparedStatement.setString(2, DigestUtil.md5Hex(JSONUtil.toJsonStr(event)));  // hash
+            preparedStatement.setString(3, event.getUserId());  // userId
+            preparedStatement.setString(4, event.getClass().getAnnotation(SegmentEventType.class).value());  // type
+            preparedStatement.setString(5, JSONUtil.toJsonStr(event));  // message
+            preparedStatement.setInt(6, optional.isResult() ? 1 : 0);  // result (UInt8)
+            preparedStatement.setInt(7, optional.getOperation());  // operation
+            preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
+            preparedStatement.setLong(9, event.getTimestamp());  // eventTime
+
+            boolean result = preparedStatement.execute();
             log.debug("Data inserted successfully!, result: {}", result);
-            return result.length == events.size();
+            return result;
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
     }
 
-    private List<T> queryData(Connection connection) throws Exception {
+    private List<SegmentEvent> queryData(Connection connection) throws Exception {
         String querySQL = """
-                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
-                     MAX(message) as message, MIN(eventTime) as eventTime FROM %s
-                    WHERE eventDate >= toDate(now() - INTERVAL 7 DAY)
-                    AND operation = 1
-                    GROUP BY hash HAVING result = 0 ORDER BY eventTime
+                SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
+                        MAX(message) as message, MIN(eventTime) as eventTime
+                FROM %s
+                WHERE eventDate >= toDate(now() - INTERVAL 7 DAY)
+                AND operation = 1
+                GROUP BY hash
+                HAVING result = 0
+                ORDER BY eventTime
+                LIMIT 100
                 """.formatted(tableName);
 
         try (Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(querySQL)) {
-            List<T> list = new ArrayList<>();
-            Class<T> clazz = (Class<T>) SegmentEventDataBase.class; // 假设你查询的实体类是 SegmentEventDataBase
-
+            List<SegmentEvent> list = new ArrayList<>();
             while (resultSet.next()) {
-                // 使用反射构造 T 类型对象
-                T instance = clazz.getDeclaredConstructor().newInstance();
+                Class<? extends SegmentEvent> clazz = SegmentEventClassRegistry.getSegmentEventClass(
+                        resultSet.getString("type"));
+                // 创建对象实例
+                SegmentEvent event = clazz.getConstructor().newInstance();
 
-                // 假设 T 类具有与数据库列对应的字段，使用反射进行赋值
-                Field eventDateField = clazz.getDeclaredField("eventDate");
-                eventDateField.setAccessible(true);
-                eventDateField.set(instance, resultSet.getDate("eventDate"));
-
-                Field hashField = clazz.getDeclaredField("hash");
-                hashField.setAccessible(true);
-                hashField.set(instance, resultSet.getString("hash"));
-
-                Field userIdField = clazz.getDeclaredField("userId");
-                userIdField.setAccessible(true);
-                userIdField.set(instance, resultSet.getString("userId"));
-
-                Field typeField = clazz.getDeclaredField("type");
-                typeField.setAccessible(true);
-                typeField.set(instance, resultSet.getString("type"));
-
-                Field messageField = clazz.getDeclaredField("message");
-                messageField.setAccessible(true);
-                messageField.set(instance, resultSet.getString("message"));
-
-                Field resultField = clazz.getDeclaredField("result");
-                resultField.setAccessible(true);
-                resultField.set(instance, resultSet.getInt("result"));
-
-                Field eventTimeField = clazz.getDeclaredField("eventTime");
-                eventTimeField.setAccessible(true);
-                eventTimeField.set(instance, resultSet.getInt("eventTime"));
-
-                // 将构造的对象添加到列表
-                list.add(instance);
+                // 遍历所有字段并进行映射
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    field.setAccessible(true);
+                    String fieldName = field.getName();
+                    Object value = resultSet.getObject(fieldName);
+                    field.set(event, value);
+                }
+                list.add(event);
             }
             return list;
-        }
-    }
-
-    private boolean updateData(Connection connection, List<SegmentEventDataBase<T>> events) throws Exception {
-        // 更新SQL语句
-        String updateSQL = """
-            UPDATE ${tableName}
-            SET result = 1
-            WHERE hash = ? AND userId = ? AND eventDate = ? AND type = ? AND result = ?
-        """.replace("${tableName}", tableName);  // 用表名替换占位符
-
-        try (PreparedStatement preparedStatement = connection.prepareStatement(updateSQL)) {
-            // 对每个事件进行更新操作
-            for (SegmentEventDataBase<T> event : events) {
-                preparedStatement.setString(1, event.getHash());  // hash
-                preparedStatement.setString(2, event.getUserId());  // userId
-                preparedStatement.setDate(3, Date.valueOf(event.getEventDate()));  // userId
-                preparedStatement.setString(4, event.getType());  // userId
-                preparedStatement.setInt(5, event.isResult() ? 1 : 0);  // result (UInt8)
-
-                // 添加到批处理
-                preparedStatement.addBatch();
-            }
-
-            // 执行批量更新
-            int[] updateCounts = preparedStatement.executeBatch();
-            log.debug("Data updated successfully, affected rows: {}", updateCounts.length);
-            return true;
-        } catch (Exception e) {
-            // 异常处理
-            log.warn("Failed to update data!", e);
-            return false;
         }
     }
 }

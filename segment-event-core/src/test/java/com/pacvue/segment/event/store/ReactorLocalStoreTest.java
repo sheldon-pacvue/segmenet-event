@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 class ReactorLocalStoreTest {
 
-    private final ReactorLocalStore<SegmentEventTrace> reactorLocalStore = new ReactorLocalStore<>(2);
+    private final ReactorLocalStore reactorLocalStore = new ReactorLocalStore(2);
 
     @Test
     public void test() throws InterruptedException {

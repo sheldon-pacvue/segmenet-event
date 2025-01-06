@@ -1,5 +1,6 @@
 package com.pacvue.segment.event.entity;
 
+import com.pacvue.segment.event.entity.annotation.SegmentEventType;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,11 +13,7 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @NoArgsConstructor
 @Accessors(chain = true)
+@SegmentEventType("group")
 public class SegmentEventGroup extends SegmentEvent {
     private String anonymousId;
-
-    @Override
-    public String getType() {
-        return "group";
-    }
 }

@@ -3,7 +3,7 @@ package com.pacvue.segementeventexample.configuration;
 import com.pacvue.segment.event.client.SegmentEventClientFile;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
-import com.pacvue.segment.event.entity.SegmentEventDataBase;
+import com.pacvue.segment.event.entity.SegmentEventOptional;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
@@ -45,8 +45,8 @@ public class ServerConfiguration {
 
     @Bean
     public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
-                               @Qualifier("distributedStore") Store<SegmentEvent> distributedStore,
-                               @Qualifier("dbStore") Store<SegmentEventDataBase<SegmentEvent>> dbStore) {
+                               @Qualifier("distributedStore") Store<Void> distributedStore,
+                               @Qualifier("dbStore") Store<SegmentEventOptional> dbStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)

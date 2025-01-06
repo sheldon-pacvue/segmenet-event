@@ -19,12 +19,12 @@ public final class SegmentIO  {
     @Builder.Default
     private boolean enabled = false;
     private final SegmentEventReporter reporter;
-    private final Store<SegmentEvent> distributedStore;
+    private final Store<Void> distributedStore;
     @NonNull
-    private final Store<SegmentEventDataBase<SegmentEvent>> dbStore;
+    private final Store<SegmentEventOptional> dbStore;
     @Builder.Default
     @NonNull
-    private final Store<SegmentEvent> bufferStore = new ReactorLocalStore<>(10);
+    private final Store<Void> bufferStore = new ReactorLocalStore(10);
     private final int bundleCount = 5;
 
 
@@ -116,8 +116,8 @@ public final class SegmentIO  {
     }
 
     private Mono<Boolean> tryToDbStore(SegmentEvent event, boolean result) {
-        SegmentEventDataBase<SegmentEvent> eventDataBase = new SegmentEventDataBase<>(event, result);
-        return dbStore.publish(eventDataBase)
+        SegmentEventOptional optional = new SegmentEventOptional(result);
+        return dbStore.publish(event, optional)
                 .doOnError(e -> log.error("failed to log event: {}", event, e))
                 .onErrorResume(e -> Mono.empty());
     }
