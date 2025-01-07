@@ -57,7 +57,7 @@ public class ServerConfiguration {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
         ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName())
-                .setMasterElection(new ZookeeperMasterElection("localhost:12181", Inet4Address.getLocalHost().getHostAddress().replaceAll("\\.", "_"), "/segment/example"));
+                .setMasterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"));
         clickHouseStore.createTableIfNotExists();
         return clickHouseStore;
     }

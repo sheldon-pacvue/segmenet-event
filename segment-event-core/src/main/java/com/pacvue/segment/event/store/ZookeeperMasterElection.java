@@ -1,7 +1,6 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.StrUtil;
-import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
@@ -14,14 +13,12 @@ import java.util.List;
 public class ZookeeperMasterElection implements MasterElection, Watcher {
     private static final String NODE_PREFIX = "/node-";
     private final ZooKeeper zooKeeper;
-    private final String localNodeInfo;
     private final String electionPath;
     private String currentNode;
     private String masterNode;
 
-    public ZookeeperMasterElection(String zkAddress, String localNodeInfo, String electionPath) throws IOException {
-        this.localNodeInfo = localNodeInfo;
-        this.zooKeeper = new ZooKeeper(zkAddress, 3000, this);
+    public ZookeeperMasterElection(String zkAddress, String electionPath) throws IOException {
+        this.zooKeeper = new ZooKeeper(zkAddress, 6000, this);
         this.electionPath = electionPath;
     }
 
@@ -30,7 +27,7 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
         if (StrUtil.isBlank(currentNode)) {
             startElection();
         }
-        return StrUtil.equals(masterNode, currentNode);
+        return StrUtil.isNotBlank(masterNode) && StrUtil.equals(masterNode, currentNode);
     }
 
     @Override
@@ -52,12 +49,32 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
     public void startElection() {
         // Create a temporary sequential node for master election
         try {
-            currentNode = zooKeeper.create(electionPath + NODE_PREFIX, localNodeInfo.getBytes(),
+            ensureParentPathExists(electionPath);
+            currentNode = zooKeeper.create(electionPath + NODE_PREFIX, new byte[0],
                     ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
             log.info("Created node: {}", currentNode);
             checkMaster();
         } catch (KeeperException | InterruptedException e) {
             log.warn("try to check master failed", e);
+        }
+    }
+
+    public void ensureParentPathExists(String electionPath) throws KeeperException, InterruptedException {
+        String[] pathParts = electionPath.split("/");  // 拆分路径
+        StringBuilder currentPath = new StringBuilder();
+
+        // 遍历路径的各部分
+        for (String part : pathParts) {
+            if (part.isEmpty()) continue;  // 跳过空部分（路径的前导斜杠）
+
+            // 拼接当前路径
+            currentPath.append("/").append(part);
+
+            // 如果当前路径不存在，创建它
+            if (zooKeeper.exists(currentPath.toString(), false) == null) {
+                zooKeeper.create(currentPath.toString(), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                log.info("Created parent path: {}", currentPath.toString());
+            }
         }
     }
 
