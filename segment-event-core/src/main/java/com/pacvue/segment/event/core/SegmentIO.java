@@ -32,6 +32,7 @@ public final class SegmentIO  {
         if (null != distributedStore) {
             distributedStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
         }
+        dbStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
         bufferStore.subscribe(this::handleReporter, bundleCount);
         this.enabled = true;
         return this;

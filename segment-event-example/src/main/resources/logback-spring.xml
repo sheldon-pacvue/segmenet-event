@@ -16,4 +16,6 @@
 
     <!-- 针对特定包或类的日志级别配置 -->
     <logger name="com.pacvue" level="debug"/>
+    <logger name="com.clickhouse" level="DEBUG" />
+
 </configuration>

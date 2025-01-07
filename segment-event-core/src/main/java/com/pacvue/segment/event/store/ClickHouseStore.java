@@ -8,10 +8,10 @@ import com.pacvue.segment.event.entity.SegmentEventOptional;
 import com.pacvue.segment.event.entity.annotation.SegmentEventType;
 import com.pacvue.segment.event.generator.SegmentEvent;
 import lombok.Builder;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
-import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.sql.*;
 
+import static com.pacvue.segment.event.entity.SegmentEventOptional.LOG_OPERATION_SEND_TO_SEGMENT;
+
 @Builder
 @Slf4j
 public class ClickHouseStore implements Store<SegmentEventOptional> {
@@ -30,17 +32,15 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
     private final String tableName;
     @Builder.Default
     private boolean subscribing = false;
+    private MasterElection masterElection;
 
-    public ClickHouseStore(DataSource dataSource, String tableName, boolean subscribing) {
+    public ClickHouseStore(@NonNull DataSource dataSource, @NonNull String tableName, MasterElection masterElection) {
         this.dataSource = dataSource;
         this.tableName = tableName;
-        this.subscribing = subscribing;
+        this.masterElection = masterElection;
         createTableIfNotExists(this.dataSource);
     }
 
-    /**
-     * TODO 写入数据库
-     */
     @Override
     public Mono<Boolean> publish(SegmentEvent event, SegmentEventOptional optional) {
         try {
@@ -58,25 +58,39 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
     }
 
     /**
-     * TODO 从数据库中查询，并且上报，注意分布式问题，使用zookeeper，redis等其他分布式系统进行选举master进行查询上报
+     * 从数据库中查询，并且自动上报未成功上报数据
+     * 注意分布式问题，如果未实现master竞争机制，则无法使用该方法，使用zookeeper，redis等其他分布式系统进行竞争master
      * 需要循环进行查询，直到查询不到数据,睡眠5分钟，然后重试
      */
     @Override
     public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
+        if (null == masterElection) {
+            return;
+        }
         this.subscribing = true;
         CompletableFuture.runAsync(() -> {
             while (subscribing) {
                 try {
+                    if (!masterElection.isMaster()) {
+                        TimeUnit.SECONDS.sleep(30);
+                        continue;
+                    }
                     List<SegmentEvent> events = queryData(dataSource.getConnection());
                     if (events.isEmpty()) {
                         // 如果没有数据，休眠5分钟
                         TimeUnit.MINUTES.sleep(5);
+                        continue;
                     }
                     for (SegmentEvent event : events) {
                         consumer.accept(List.of(event));
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    TimeUnit.SECONDS.sleep(15);
+                } catch (InterruptedException ex) {
+                    log.error("try to sleep failed, stop subscribe", ex);
+                    this.subscribing = false;
+                    throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    log.warn("resend segment event meet some error", ex);
                 }
             }
         }, executorService);
@@ -156,13 +170,13 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
                         MAX(message) as message, MIN(eventTime) as eventTime
                 FROM %s
-                WHERE eventDate >= toDate(now() - INTERVAL 7 DAY)
-                AND operation = 1
+                WHERE eventDate >= toDate(now() - INTERVAL 2 DAY)
+                AND operation = %d
                 GROUP BY hash
                 HAVING result = 0
                 ORDER BY eventTime
-                LIMIT 100
-                """.formatted(tableName);
+                LIMIT 200
+                """.formatted(tableName, LOG_OPERATION_SEND_TO_SEGMENT);
 
         try (Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(querySQL)) {
@@ -170,17 +184,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
             while (resultSet.next()) {
                 Class<? extends SegmentEvent> clazz = SegmentEventClassRegistry.getSegmentEventClass(
                         resultSet.getString("type"));
-                // 创建对象实例
-                SegmentEvent event = clazz.getConstructor().newInstance();
-
-                // 遍历所有字段并进行映射
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    field.setAccessible(true);
-                    String fieldName = field.getName();
-                    Object value = resultSet.getObject(fieldName);
-                    field.set(event, value);
-                }
+                SegmentEvent event = JSONUtil.toBean(resultSet.getString("message"), clazz);
                 list.add(event);
             }
             return list;
