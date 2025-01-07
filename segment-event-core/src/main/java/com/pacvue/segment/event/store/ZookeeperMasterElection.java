@@ -1,6 +1,7 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.StrUtil;
+import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
@@ -12,13 +13,15 @@ import java.util.List;
 @Slf4j
 public class ZookeeperMasterElection implements MasterElection, Watcher {
     private static final String NODE_PREFIX = "/node-";
-    private final ZooKeeper zooKeeper;
+    private final String zkAddress;
     private final String electionPath;
+    private ZooKeeper zooKeeper;
     private String currentNode;
     private String masterNode;
 
     public ZookeeperMasterElection(String zkAddress, String electionPath) throws IOException {
-        this.zooKeeper = new ZooKeeper(zkAddress, 6000, this);
+        this.zkAddress = zkAddress;
+        this.zooKeeper = new ZooKeeper(zkAddress, 10000, this);
         this.electionPath = electionPath;
     }
 
@@ -32,28 +35,31 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
 
     @Override
     public void process(WatchedEvent event) {
-        if (event.getType() == Event.EventType.None) {
-            return;
-        }
-
         try {
             // Watch for the previous node to be deleted to trigger re-election
-            if (event.getType() == Event.EventType.NodeDeleted) {
-                checkMaster();
+            if (event.getType() == Event.EventType.NodeDeleted && event.getPath().equals(currentNode)) {
+                this.currentNode = null;
+                log.info("current node deleted is {}", currentNode);
             }
         } catch (Exception e) {
             log.warn("try to check master failed", e);
         }
     }
 
+    /**
+     * 尝试创建currentNode并且监听
+     */
     public void startElection() {
         // Create a temporary sequential node for master election
         try {
             ensureParentPathExists(electionPath);
             currentNode = zooKeeper.create(electionPath + NODE_PREFIX, new byte[0],
                     ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-            log.info("Created node: {}", currentNode);
+            watchNode(currentNode);
+            log.info("created current node: {}", currentNode);
             checkMaster();
+        } catch (KeeperException.SessionExpiredException | KeeperException.ConnectionLossException ex) {
+            handleSessionExpired(this::startElection);
         } catch (KeeperException | InterruptedException e) {
             log.warn("try to check master failed", e);
         }
@@ -78,24 +84,56 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
         }
     }
 
-    private void checkMaster() throws KeeperException, InterruptedException {
-        List<String> nodes = zooKeeper.getChildren(electionPath, false);
-        Collections.sort(nodes); // Sort nodes lexicographically
+    /**
+     * 获取当前最新的masterNode,尝试监听当前节点前面的节点
+     */
+    private void checkMaster() {
+        try {
+            masterNode = null;
+            List<String> nodes = zooKeeper.getChildren(electionPath, false);
+            Collections.sort(nodes); // Sort nodes lexicographically
 
-        // The first node in the sorted list is the master
-        String firstNode = nodes.get(0);
+            // The first node in the sorted list is the master
+            masterNode = nodes.get(0);
 
-        if (currentNode.endsWith(firstNode)) {
-            // This is the smallest node, so we're the master
-            masterNode = currentNode;
-            log.info("I am the master: {}", currentNode);
-        } else {
-            // Watch for the node before us to be deleted, triggering re-election
-            String prevNode = nodes.get(nodes.indexOf(currentNode.substring(electionPath.length())) - 1);
-            Stat stat = zooKeeper.exists(electionPath + "/" + prevNode, true);
-            if (stat != null) {
-                log.info("I am not the master. Watching node: {}", prevNode);
+            if (currentNode.endsWith(masterNode)) {
+                // This is the smallest node, so we're the master
+                log.info("I am the master: {}", currentNode);
+            } else {
+                int currentIndex = nodes.indexOf(currentNode.substring(currentNode.lastIndexOf("/") + 1));
+                // Watch for the node before us to be deleted, triggering re-election
+                if (currentIndex > 0) {
+                    String prevNode = nodes.get(currentIndex - 1);
+                    watchNode(prevNode);
+                }
             }
+        } catch (KeeperException | InterruptedException e) {
+            log.warn("try to check master failed", e);
+        }
+    }
+
+    private void handleSessionExpired(Runnable callback) {
+        try {
+            // 关闭当前的 ZooKeeper 客户端实例
+            if (zooKeeper != null) {
+                zooKeeper.close();
+            }
+            // 重新建立连接
+            zooKeeper = new ZooKeeper(zkAddress, 10000, this);
+            log.info("Reconnected to ZooKeeper with a new session.");
+            callback.run();
+        } catch (Exception e) {
+            log.warn("Reconnected to ZooKeeper with a new session failed", e);
+        }
+    }
+
+    public void watchNode(String nodePath) throws KeeperException, InterruptedException {
+        // Register a watcher to listen to changes on this node
+        Stat stat = zooKeeper.exists(nodePath, true);
+        if (stat != null) {
+            log.info("Watcher set on node: {}", nodePath);
+        } else {
+            log.warn("Node does not exist, cannot set watcher on: {}", nodePath);
         }
     }
 
@@ -105,5 +143,4 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
         }
         zooKeeper.close();
     }
-
 }

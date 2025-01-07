@@ -73,7 +73,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                     List<SegmentEvent> events = queryData();
                     if (events.isEmpty()) {
                         // 如果没有数据，休眠5分钟
-                        TimeUnit.MINUTES.sleep(5);
+                        TimeUnit.MINUTES.sleep(1);
                         continue;
                     }
                     for (SegmentEvent event : events) {
