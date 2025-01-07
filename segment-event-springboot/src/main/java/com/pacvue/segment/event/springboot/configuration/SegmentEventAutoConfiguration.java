@@ -131,11 +131,9 @@ public class SegmentEventAutoConfiguration {
     public Store<SegmentEventOptional> dbStore(ClickHouseDBStoreProperties properties) {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
-
-        return ClickHouseStore.builder()
-                .dataSource(dataSource)
-                .tableName(properties.getTableName())
-                .build();
+        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName());
+        clickHouseStore.createTableIfNotExists();
+        return clickHouseStore;
     }
 
     @Bean

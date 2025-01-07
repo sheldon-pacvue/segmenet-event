@@ -20,7 +20,6 @@ public final class SegmentIO  {
     private boolean enabled = false;
     private final SegmentEventReporter reporter;
     private final Store<Void> distributedStore;
-    @NonNull
     private final Store<SegmentEventOptional> dbStore;
     @Builder.Default
     @NonNull
@@ -32,7 +31,9 @@ public final class SegmentIO  {
         if (null != distributedStore) {
             distributedStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
         }
-        dbStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
+        if (null != dbStore) {
+            dbStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
+        }
         bufferStore.subscribe(this::handleReporter, bundleCount);
         this.enabled = true;
         return this;

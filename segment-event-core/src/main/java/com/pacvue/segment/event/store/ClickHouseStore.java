@@ -7,8 +7,9 @@ import com.pacvue.segment.event.entity.SegmentEventClassRegistry;
 import com.pacvue.segment.event.entity.SegmentEventOptional;
 import com.pacvue.segment.event.entity.annotation.SegmentEventType;
 import com.pacvue.segment.event.generator.SegmentEvent;
-import lombok.Builder;
-import lombok.NonNull;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -24,30 +25,24 @@ import javax.sql.*;
 
 import static com.pacvue.segment.event.entity.SegmentEventOptional.LOG_OPERATION_SEND_TO_SEGMENT;
 
-@Builder
+@Data
+@RequiredArgsConstructor
+@Accessors(chain = true)
 @Slf4j
 public class ClickHouseStore implements Store<SegmentEventOptional> {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final DataSource dataSource;
     private final String tableName;
-    @Builder.Default
-    private boolean subscribing = false;
     private MasterElection masterElection;
+    private boolean subscribing = false;
 
-    public ClickHouseStore(@NonNull DataSource dataSource, @NonNull String tableName, MasterElection masterElection) {
-        this.dataSource = dataSource;
-        this.tableName = tableName;
-        this.masterElection = masterElection;
-        createTableIfNotExists(this.dataSource);
-    }
 
     @Override
     public Mono<Boolean> publish(SegmentEvent event, SegmentEventOptional optional) {
         try {
-            Connection connection = dataSource.getConnection();
             return Mono.defer(() -> {
                 try {
-                    return Mono.just(insertData(connection, event, optional));
+                    return Mono.just(insertData(event, optional));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -75,7 +70,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                         TimeUnit.SECONDS.sleep(30);
                         continue;
                     }
-                    List<SegmentEvent> events = queryData(dataSource.getConnection());
+                    List<SegmentEvent> events = queryData();
                     if (events.isEmpty()) {
                         // 如果没有数据，休眠5分钟
                         TimeUnit.MINUTES.sleep(5);
@@ -106,7 +101,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
      * 因为这个sql仅会判断本地表是否存在，即使存在仍然会创建zookeeper节点
      * 但是由于节点已经存在，则会报错，所以分开先判断表是否存在
      */
-    private void createTableIfNotExists(DataSource dataSource) {
+    public void createTableIfNotExists() {
         String checkTableSQL = "EXISTS TABLE " + tableName;
         String createTableSQL = """
                CREATE TABLE %s (
@@ -138,14 +133,14 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         }
     }
 
-    private boolean insertData(Connection connection, SegmentEvent event, SegmentEventOptional optional) {
+    private boolean insertData(SegmentEvent event, SegmentEventOptional optional) {
         // 插入的SQL语句
         String insertSQL = """
             INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.formatted(tableName);  // 用表名替换占位符
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(insertSQL)) {
+        try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
             // 插入多条记录
             preparedStatement.setDate(1, DateUtil.date(event.getTimestamp()).toSqlDate());  // eventDate
             preparedStatement.setString(2, DigestUtil.md5Hex(JSONUtil.toJsonStr(event)));  // hash
@@ -165,7 +160,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         }
     }
 
-    private List<SegmentEvent> queryData(Connection connection) throws Exception {
+    private List<SegmentEvent> queryData() throws Exception {
         String querySQL = """
                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
                         MAX(message) as message, MIN(eventTime) as eventTime
@@ -178,7 +173,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                 LIMIT 200
                 """.formatted(tableName, LOG_OPERATION_SEND_TO_SEGMENT);
 
-        try (Statement statement = connection.createStatement();
+        try (Statement statement = dataSource.getConnection().createStatement();
             ResultSet resultSet = statement.executeQuery(querySQL)) {
             List<SegmentEvent> list = new ArrayList<>();
             while (resultSet.next()) {
