@@ -8,6 +8,7 @@ import com.pacvue.segment.event.metric.MetricsCounter;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
+import org.apache.commons.lang3.concurrent.ThresholdCircuitBreaker;
 import reactor.core.publisher.Mono;
 
 import java.util.List;

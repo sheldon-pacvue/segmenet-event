@@ -4,7 +4,7 @@
 
   <parent>
     <groupId>com.pacvue</groupId>
-    <artifactId>segement-event-client</artifactId>
+    <artifactId>segment-event-client</artifactId>
     <version>${revision}</version>
   </parent>
 
@@ -78,6 +78,11 @@
     <dependency>
       <groupId>cn.hutool</groupId>
       <artifactId>hutool-crypto</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-reactor</artifactId>
     </dependency>
   </dependencies>
 </project>
