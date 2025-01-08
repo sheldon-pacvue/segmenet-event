@@ -44,7 +44,9 @@ public final class SegmentIO  {
         if (null != distributedStore) {
             distributedStore.shutdown();
         }
-        dbStore.shutdown();
+        if (null != dbStore) {
+            dbStore.shutdown();
+        }
         bufferStore.shutdown();
         return this;
     }
@@ -83,9 +85,7 @@ public final class SegmentIO  {
                     // 尝试分布式贮藏
                     return Mono.defer(() -> distributedStore.publish(event))
                             // 如果分布式存储失败，尝试本地缓冲后直接上报
-                            .onErrorResume(ex -> bufferStore.publish(event))
-                            // 如果本地缓冲已经关闭, 尝试存入数据库中
-                            .onErrorResume(ex -> tryToDbStore(event, false));
+                            .onErrorResume(ex -> bufferStore.publish(event));
                 })
                 .onErrorResume(ex -> {
                     log.error("deliver failed", ex);
@@ -105,12 +105,13 @@ public final class SegmentIO  {
                             .subscribeOn(Schedulers.boundedElastic())
                             .subscribe();
                 })
-                // 如果上报失败将存储到数据库中
+                // 如果上报失败优先回流到distributedStore，如果失败进入数据库
                 .onErrorResume(throwable -> {
                     log.warn("batch report failed, switching to single event processing. Error: {}", throwable.getMessage(), throwable);
                     return Flux.fromIterable(events)
-                            .flatMap(event -> tryToDbStore(event, false))
-                            .then(Mono.just(Boolean.TRUE)); // 使用 Mono.just(false) 符合返回类型 Mono<Boolean>
+                            .flatMap(event -> distributedStore.publish(event).onErrorResume(ex -> tryToDbStore(event, false)))
+                            .all(result -> result) // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
+                            .flatMap(Mono::just);
                 })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic())

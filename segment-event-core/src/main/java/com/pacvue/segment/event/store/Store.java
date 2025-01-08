@@ -16,5 +16,7 @@ public interface Store<O> {
 
     void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount);
 
+    void stopScribe();
+
     void shutdown();
 }

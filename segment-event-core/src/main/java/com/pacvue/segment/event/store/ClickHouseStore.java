@@ -16,10 +16,7 @@ import reactor.core.publisher.Mono;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import javax.sql.*;
 
@@ -30,7 +27,7 @@ import static com.pacvue.segment.event.entity.SegmentEventOptional.LOG_OPERATION
 @Accessors(chain = true)
 @Slf4j
 public class ClickHouseStore implements Store<SegmentEventOptional> {
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
     private final String tableName;
     private MasterElection masterElection;
@@ -63,30 +60,30 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
             return;
         }
         this.subscribing = true;
-        CompletableFuture.runAsync(() -> {
-            while (subscribing) {
-                try {
-                    if (!masterElection.isMaster()) {
-                        TimeUnit.SECONDS.sleep(30);
-                        continue;
-                    }
-                    List<SegmentEvent> events = queryData();
-                    if (events.isEmpty()) {
-                        // 如果没有数据，休眠5分钟
-                        TimeUnit.MINUTES.sleep(5);
-                        continue;
-                    }
-                    consumer.accept(events);
-                    TimeUnit.SECONDS.sleep(15);
-                } catch (InterruptedException ex) {
-                    log.error("try to sleep failed, stop subscribe", ex);
-                    this.subscribing = false;
-                    throw new RuntimeException(ex);
-                } catch (Exception ex) {
-                    log.warn("resend segment event meet some error", ex);
+        executor.schedule(() -> {
+            try {
+                if (!masterElection.isMaster()) {
+                    return;
+                }
+                List<SegmentEvent> events = queryData();
+                log.info("form db data size: {}", events.size());
+                if (events.isEmpty()) {
+                    return;
+                }
+                consumer.accept(events);
+            } catch (Exception ex) {
+                log.warn("resend segment event meet some error", ex);
+            } finally {
+                if (subscribing) {
+                    subscribe(consumer, bundleCount);
                 }
             }
-        }, executorService);
+        }, 1, TimeUnit.MINUTES);
+    }
+
+    @Override
+    public void stopScribe() {
+        this.subscribing = false;
     }
 
     @Override

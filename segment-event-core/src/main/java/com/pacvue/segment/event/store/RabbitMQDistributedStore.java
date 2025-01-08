@@ -23,6 +23,7 @@ public class RabbitMQDistributedStore implements Store<Void> {
 
     private final Connection connection;
     private final Channel channel;
+    private String consumerTag;
 
 
     // 发布消息
@@ -43,7 +44,7 @@ public class RabbitMQDistributedStore implements Store<Void> {
     @Override
     public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
         try {
-            channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
+            this.consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
                     // 为了保留范型适配，这里必须进行类型强转，否则将导致类型转换错误
@@ -52,10 +53,20 @@ public class RabbitMQDistributedStore implements Store<Void> {
                     consumer.accept(eventList);
                 }
             });
-
-
         } catch (IOException e) {
             throw new RuntimeException("Subscribing failed", e);
+        }
+    }
+
+    @Override
+    public void stopScribe() {
+        // 停止消费（解除订阅）
+        // 这里的 consumerTag 是上面 basicConsume 方法返回的标签
+        try {
+            channel.basicCancel(consumerTag);  // 取消消费者，解除订阅
+            consumerTag = null;
+        } catch (IOException e) {
+            log.error("stopScribe failed", e);
         }
     }
 
