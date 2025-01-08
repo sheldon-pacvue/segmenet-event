@@ -1,4 +1,4 @@
-package com.pacvue.segementeventexample.controller;
+package com.pacvue.segment.event.example.controller;
 
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;

@@ -1,4 +1,4 @@
-package com.pacvue.segementeventexample.configuration;
+package com.pacvue.segment.event.example.configuration;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClientFile;

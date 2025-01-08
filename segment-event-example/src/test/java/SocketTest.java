@@ -1,5 +1,5 @@
 
-import com.pacvue.segementeventexample.SegmentEventExampleApplication;
+import com.pacvue.segment.event.example.SegmentEventExampleApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 
 

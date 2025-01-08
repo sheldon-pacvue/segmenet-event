@@ -1,4 +1,4 @@
-package com.pacvue.segementeventexample;
+package com.pacvue.segment.event.example;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

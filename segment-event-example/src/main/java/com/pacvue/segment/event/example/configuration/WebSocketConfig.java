@@ -1,4 +1,4 @@
-package com.pacvue.segementeventexample.configuration;
+package com.pacvue.segment.event.example.configuration;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
