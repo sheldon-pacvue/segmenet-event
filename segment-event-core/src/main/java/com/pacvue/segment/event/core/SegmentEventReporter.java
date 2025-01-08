@@ -30,7 +30,7 @@ public final class SegmentEventReporter {
         return client.send(events)
                 .doOnSuccess(b -> {
                     /**
- *                   *  TODO 这里需要添加计数器Metric
+                     *  TODO 这里需要添加计数器Metric
                      *  事件id是helium10.segmentio.async.send-events
                      *  内容写入到 @console/runtime/telegraf-metrics.out
                      *  内容类似 name+methods value timestamp

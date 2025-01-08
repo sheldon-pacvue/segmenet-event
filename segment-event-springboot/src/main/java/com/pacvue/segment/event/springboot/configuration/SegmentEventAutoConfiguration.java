@@ -111,7 +111,8 @@ public class SegmentEventAutoConfiguration {
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
-        channel.queueDeclare(properties.getQueueName(), false, false, false, null);
+        channel.exchangeDeclare(properties.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
+        channel.queueDeclare(properties.getQueueName(), true, false, false, null);
         channel.queueBind(properties.getQueueName(), properties.getExchangeName(), properties.getRoutingKey());
 
         return RabbitMQDistributedStore.builder()
