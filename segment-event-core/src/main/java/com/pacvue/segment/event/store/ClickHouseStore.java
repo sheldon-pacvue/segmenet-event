@@ -76,9 +76,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                         TimeUnit.MINUTES.sleep(5);
                         continue;
                     }
-                    for (SegmentEvent event : events) {
-                        consumer.accept(List.of(event));
-                    }
+                    consumer.accept(events);
                     TimeUnit.SECONDS.sleep(15);
                 } catch (InterruptedException ex) {
                     log.error("try to sleep failed, stop subscribe", ex);
