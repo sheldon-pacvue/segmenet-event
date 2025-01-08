@@ -6,7 +6,6 @@ import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.entity.SegmentEventOptional;
-import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.metric.MetricsCounter;
@@ -19,7 +18,6 @@ import com.pacvue.segment.event.springboot.properties.SegmentEventPrometheusMetr
 import com.pacvue.segment.event.store.ClickHouseStore;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
-import com.pacvue.segment.event.store.ZookeeperMasterElection;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -35,9 +33,7 @@ import reactor.netty.resources.ConnectionProvider;
 import com.rabbitmq.client.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;

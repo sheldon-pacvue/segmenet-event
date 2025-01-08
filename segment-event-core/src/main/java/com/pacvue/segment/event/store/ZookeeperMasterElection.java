@@ -1,7 +1,6 @@
 package com.pacvue.segment.event.store;
 
 import cn.hutool.core.util.StrUtil;
-import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
@@ -37,9 +36,10 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
     public void process(WatchedEvent event) {
         try {
             // Watch for the previous node to be deleted to trigger re-election
-            if (event.getType() == Event.EventType.NodeDeleted && event.getPath().equals(currentNode)) {
+            if (event.getType() == Event.EventType.NodeDeleted && StrUtil.equalsAny(event.getPath(), masterNode, currentNode)) {
                 this.currentNode = null;
-                log.info("current node deleted is {}", currentNode);
+                this.masterNode = null;
+                log.info("node deleted is {}", event.getPath());
             }
         } catch (Exception e) {
             log.warn("try to check master failed", e);
