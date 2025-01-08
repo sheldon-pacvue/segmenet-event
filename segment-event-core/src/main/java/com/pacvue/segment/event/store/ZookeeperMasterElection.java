@@ -29,7 +29,7 @@ public class ZookeeperMasterElection implements MasterElection, Watcher {
         if (StrUtil.isBlank(currentNode)) {
             startElection();
         }
-        return StrUtil.isNotBlank(masterNode) && StrUtil.equals(masterNode, currentNode);
+        return StrUtil.isNotBlank(masterNode) && currentNode.endsWith(masterNode);
     }
 
     @Override

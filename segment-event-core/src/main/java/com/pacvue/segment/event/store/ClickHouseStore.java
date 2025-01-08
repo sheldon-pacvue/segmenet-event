@@ -56,13 +56,27 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
      */
     @Override
     public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
-        if (null == masterElection) {
+        if (subscribing) {
             return;
         }
         this.subscribing = true;
+        loopGetData(consumer);
+    }
+
+    @Override
+    public void stopScribe() {
+        this.subscribing = false;
+    }
+
+    @Override
+    public void shutdown() {
+        this.subscribing = false;
+    }
+
+    private void loopGetData(Consumer<List<SegmentEvent>> consumer) {
         executor.schedule(() -> {
             try {
-                if (!masterElection.isMaster()) {
+                if (null == masterElection || !masterElection.isMaster()) {
                     return;
                 }
                 List<SegmentEvent> events = queryData();
@@ -75,20 +89,10 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
                 log.warn("resend segment event meet some error", ex);
             } finally {
                 if (subscribing) {
-                    subscribe(consumer, bundleCount);
+                    loopGetData(consumer);
                 }
             }
         }, 1, TimeUnit.MINUTES);
-    }
-
-    @Override
-    public void stopScribe() {
-        this.subscribing = false;
-    }
-
-    @Override
-    public void shutdown() {
-        this.subscribing = false;
     }
 
     /**

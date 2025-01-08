@@ -26,29 +26,59 @@ public final class SegmentIO  {
     private final Store<Void> bufferStore = new ReactorLocalStore(10);
     private final int bundleCount = 5;
 
-
+    /**
+     * 开始接受事件，并且开始上报
+     */
     public SegmentIO start() {
         if (null != distributedStore) {
             distributedStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
-        }
-        if (null != dbStore) {
-            dbStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
         }
         bufferStore.subscribe(this::handleReporter, bundleCount);
         this.enabled = true;
         return this;
     }
 
+    /**
+     * 仍然接收事件，但是暂停上报
+     */
+    public SegmentIO pause() {
+        if (null != distributedStore) {
+            distributedStore.stopScribe();
+        }
+        bufferStore.stopScribe();
+        return this;
+    }
+
+    /**
+     * 不再接收事件，将未处理完的事件立即上报
+     */
     public SegmentIO shutdown() {
         this.enabled = false;
         if (null != distributedStore) {
             distributedStore.shutdown();
         }
-        if (null != dbStore) {
-            dbStore.shutdown();
-        }
         bufferStore.shutdown();
         return this;
+    }
+
+    /**
+     * 开始从数据库拉取失败事件上报
+     */
+    public boolean startResend() {
+        if (null != dbStore) {
+            dbStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 停止从数据库拉取失败事件上报
+     */
+    public void stopResend() {
+        if (null != dbStore) {
+            dbStore.stopScribe();
+        }
     }
 
     public void trace(SegmentEventGenerator<SegmentEventTrace> generator) {

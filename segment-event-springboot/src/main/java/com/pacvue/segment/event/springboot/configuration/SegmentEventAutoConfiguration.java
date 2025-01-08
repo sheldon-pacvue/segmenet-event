@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 
 
 @Configuration
+@ComponentScan(basePackages = "com.pacvue")
 @ConfigurationPropertiesScan(basePackages = {
         "com.pacvue.segment.event.springboot.properties"
 })
