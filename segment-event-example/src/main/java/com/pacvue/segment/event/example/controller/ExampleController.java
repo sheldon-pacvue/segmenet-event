@@ -18,6 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.Date;
+
 @RestController
 public class ExampleController {
     private static final Logger log = LoggerFactory.getLogger(ExampleController.class);
@@ -46,7 +48,7 @@ public class ExampleController {
             segmentIO.track(() -> {
                 String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
                 log.info("userId: {}", userId);
-                return Mono.just(TrackMessage.builder("hello-right").userId(userId));
+                return Mono.just(TrackMessage.builder("hello-right").userId(userId).anonymousId(userId).sentAt(new Date()));
             });
             return Mono.just("right");
         });
@@ -63,7 +65,7 @@ public class ExampleController {
             ServerWebExchange context = ctx.get(ServerWebExchange.class);
             String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
             log.info("userId: {}", userId);
-            return Mono.just(TrackMessage.builder("hello-right2").userId(userId));
+            return Mono.just(TrackMessage.builder("hello-right2").userId(userId).anonymousId(userId).sentAt(new Date()));
         })))
         .flatMap(b -> Mono.just(b.toString()));
     }
@@ -75,7 +77,7 @@ public class ExampleController {
      */
     @GetMapping("/hello/right3")
     public Mono<String> right3() {
-        segmentAnalytics.enqueue(TrackMessage.builder("hello-right3").userId("123").anonymousId("123"));
+        segmentAnalytics.enqueue(TrackMessage.builder("hello-right3").userId("123").anonymousId("123").sentAt(new Date()));
 
         return Mono.just("right3");
     }

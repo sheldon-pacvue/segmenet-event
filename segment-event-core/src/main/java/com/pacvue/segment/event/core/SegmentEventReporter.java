@@ -2,7 +2,6 @@ package com.pacvue.segment.event.core;
 
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
-import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.segment.analytics.messages.Message;
@@ -12,12 +11,12 @@ import lombok.NonNull;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Data
 @Builder
 public final class SegmentEventReporter {
-    @NonNull
     private final MetricsCounter metricsCounter;
 
     @NonNull
@@ -36,7 +35,7 @@ public final class SegmentEventReporter {
                        内容类似 name+methods value timestamp
                        helium10.segmentio.async.send-events.count 100 1245547899
                      */
-                    metricsCounter.inc(events.size());
+                    Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.size()));
                 });
     }
 

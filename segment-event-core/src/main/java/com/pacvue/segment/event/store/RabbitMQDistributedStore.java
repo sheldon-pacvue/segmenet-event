@@ -27,10 +27,6 @@ import java.util.function.Consumer;
 @Data
 @Builder
 public class RabbitMQDistributedStore implements Store<Message> {
-    private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapterFactory(new AutoValueAdapterFactory())
-            .registerTypeAdapter(Date.class, new ISO8601DateAdapter())
-            .create();
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;

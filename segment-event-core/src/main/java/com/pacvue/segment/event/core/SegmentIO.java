@@ -24,8 +24,17 @@ public final class SegmentIO  {
     @Builder.Default
     private boolean enabled = false;
     private final SegmentEventReporter reporter;
+    /**
+     * 非必须： 分布式缓冲，用于流量整形，降低峰值负载
+     */
     private final Store<Message> distributedStore;
+    /**
+     * 非必须： report到segment失败，或者记录发送
+     */
     private final Store<SegmentPersistingMessage> persistingStore;
+    /**
+     * 必须： 用于本地事件的缓冲，满足条件后批量进行上报
+     */
     @Builder.Default
     @NonNull
     private final Store<Message> bufferStore = new ReactorLocalStore(10);
@@ -154,9 +163,11 @@ public final class SegmentIO  {
     }
 
     private Mono<Boolean> tryPersist(Message event, boolean result) {
-        return persistingStore.publish(SegmentPersistingMessage.builder().message(event).result(result).build())
-                .doOnError(e -> log.error("failed to log event: {}", event, e))
-                .onErrorResume(e -> Mono.empty());
+        return Mono.defer(() -> persistingStore.publish(SegmentPersistingMessage.builder().message(event).result(result).build()))
+                .onErrorResume(ex -> {
+                    log.warn("persist failed, event: {}", event, ex);
+                    return Mono.just(Boolean.FALSE);
+                });
     }
 
     private Message buildMessage(MessageBuilder builder) {

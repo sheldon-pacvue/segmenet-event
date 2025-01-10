@@ -62,61 +62,15 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public MetricsCounter metricsCounter(MeterRegistry meterRegistry, SegmentEventPrometheusMetricsProperties properties) {
-        return SpringPrometheusMetricsCounter.builder(meterRegistry, properties.getName())
-                .tags(properties.getTags())
-                .build();
+    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry) {
+        return SegmentEventReporter.builder().registry(segmentEventClientRegistry).build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry, MetricsCounter metricsCounter) {
-        return SegmentEventReporter.builder().metricsCounter(metricsCounter).registry(segmentEventClientRegistry).build();
-    }
-
-
-    @Bean
-    @ConditionalOnMissingBean(name = "distributedStore")
-    @ConditionalOnProperty(value = RabbitMQRemoteStoreProperties.PROPERTIES_PREFIX + ".enabled", havingValue = "true")
-    public Store<Message> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setUri(properties.getUri());
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-
-        channel.exchangeDeclare(properties.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
-        channel.queueDeclare(properties.getQueueName(), true, false, false, null);
-        channel.queueBind(properties.getQueueName(), properties.getExchangeName(), properties.getRoutingKey());
-
-        return RabbitMQDistributedStore.builder()
-                .connection(connection)
-                .channel(channel)
-                .exchangeName(properties.getExchangeName())
-                .routingKey(properties.getRoutingKey())
-                .queueName(properties.getQueueName())
-                .build();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "persistingStore")
-    @Qualifier("persistingStore")
-    public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) {
-        DruidDataSource dataSource = new DruidDataSource();
-        dataSource.configFromPropeties(properties.getDataSourceProperties());
-        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName(), properties.getLoopIntervalMinutes());
-        clickHouseStore.createTableIfNotExists();
-        return clickHouseStore;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
-                               @Qualifier("distributedStore") Store<Message> distributedStore,
-                               @Qualifier("persistingStore") Store<SegmentPersistingMessage> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .distributedStore(distributedStore)
-                .persistingStore(persistingStore)
-                .build();
+                .build().start();
     }
 }

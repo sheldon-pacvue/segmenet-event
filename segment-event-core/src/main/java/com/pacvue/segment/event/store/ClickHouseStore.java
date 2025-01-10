@@ -1,5 +1,6 @@
 package com.pacvue.segment.event.store;
 
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
@@ -14,7 +15,7 @@ import reactor.core.publisher.Mono;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import javax.sql.*;
@@ -142,16 +143,17 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
             """.formatted(tableName);  // 用表名替换占位符
 
         try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
+            String json = gson.toJson(event);
             // 插入多条记录
-            preparedStatement.setDate(1, Objects.requireNonNull(DateUtil.date(event.sentAt())).toSqlDate());  // eventDate
-            preparedStatement.setString(2, DigestUtil.md5Hex(JSONUtil.toJsonStr(event)));  // hash
+            preparedStatement.setDate(1, Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null));  // eventDate
+            preparedStatement.setString(2, DigestUtil.md5Hex(json));  // hash
             preparedStatement.setString(3, event.userId());  // userId
             preparedStatement.setString(4, event.type().name());  // type
-            preparedStatement.setString(5, JSONUtil.toJsonStr(event));  // message
+            preparedStatement.setString(5, json);  // message
             preparedStatement.setBoolean(6, event.result());  // result (UInt8)
             preparedStatement.setInt(7, event.operation());  // operation
             preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
-            preparedStatement.setLong(9, Objects.requireNonNull(DateUtil.date(event.sentAt())).toTimestamp().getTime());  // eventTime
+            preparedStatement.setLong(9, Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toTimestamp).map(Timestamp::getTime).orElse(0L));  // eventTime
 
             boolean result = preparedStatement.execute();
             log.debug("Data inserted successfully!, result: {}", result);
