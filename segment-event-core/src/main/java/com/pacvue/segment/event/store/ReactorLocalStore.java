@@ -36,11 +36,9 @@ public class ReactorLocalStore implements Store<Message> {
                 .takeWhile(events -> this.subscribing).subscribe(events -> {
             log.debug("event consume start, events：{}", events);
             consumer.accept(events);
-        }, error -> {
-            log.error("Error consuming events", error);
-        }, () -> {
-            log.debug("Event consumption complete.");
-        });
+        },
+                        error -> log.error("Error consuming events", error),
+                        () -> log.debug("Event consumption complete."));
     }
 
     /**

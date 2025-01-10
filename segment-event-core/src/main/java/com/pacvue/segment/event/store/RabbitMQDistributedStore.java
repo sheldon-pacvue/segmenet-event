@@ -68,7 +68,6 @@ public class RabbitMQDistributedStore implements Store<Message> {
                     // 从消息头提取类型信息
                     String type = properties.getHeaders().get("type").toString();
                     Class<?> clazz = Class.forName(type);
-                    // 动态加载类
                     Type resultType = TypeToken.get(clazz).getType();
                     Message event = gson.fromJson(new String(body, StandardCharsets.UTF_8), resultType);
 
