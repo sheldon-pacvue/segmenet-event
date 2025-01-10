@@ -2,13 +2,11 @@ package com.pacvue.segment.event.example.controller;
 
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.segment.analytics.Analytics;
-import com.segment.analytics.internal.AnalyticsClient;
+import com.pacvue.segment.event.example.generator.TrackSimpleGenerator;
 import com.segment.analytics.messages.TrackMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +24,9 @@ public class ExampleController {
 
     @Autowired
     private SegmentIO segmentIO;
+
+    @Autowired
+    private TrackSimpleGenerator trackSimpleGenerator;
 
     @GetMapping("/503")
     public Mono<Integer> func503() throws InterruptedException {
@@ -65,6 +66,17 @@ public class ExampleController {
             return Mono.just(TrackMessage.builder("hello-right2").userId(userId).anonymousId(userId).sentAt(new Date()));
         })))
         .flatMap(b -> Mono.just(b.toString()));
+    }
+
+    /**
+     * Right
+     *
+     * @return
+     */
+    @GetMapping("/hello/right3")
+    public Mono<String> right3() {
+        segmentIO.track(trackSimpleGenerator);
+        return Mono.just("right3");
     }
 
 

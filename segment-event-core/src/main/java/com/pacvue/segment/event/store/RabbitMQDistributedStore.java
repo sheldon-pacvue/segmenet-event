@@ -1,12 +1,8 @@
 package com.pacvue.segment.event.store;
 
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.rabbitmq.client.*;
-import com.segment.analytics.gson.AutoValueAdapterFactory;
-import com.segment.analytics.gson.ISO8601DateAdapter;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +13,6 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;

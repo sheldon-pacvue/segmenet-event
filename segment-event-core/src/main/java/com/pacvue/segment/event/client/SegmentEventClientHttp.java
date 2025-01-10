@@ -1,7 +1,6 @@
 package com.pacvue.segment.event.client;
 
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.json.JSONUtil;
 import com.segment.analytics.messages.Message;
 import io.netty.handler.codec.http.*;
 import lombok.*;
@@ -71,7 +70,7 @@ public class SegmentEventClientHttp implements SegmentEventClient {
 
         public static Mono<String> generate(List<Message> events) {
             Body body = new Body().setBatch(events).setSendAt(DateUtil.format(new Date(), SEND_AT_FORMAT));
-            return Mono.just(JSONUtil.toJsonStr(body));
+            return Mono.just(gson.toJson(body));
         }
     }
 

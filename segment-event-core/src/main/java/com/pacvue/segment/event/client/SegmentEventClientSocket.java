@@ -2,7 +2,6 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import cn.hutool.socket.SocketUtil;
 import com.segment.analytics.messages.Message;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -91,7 +90,7 @@ public class SegmentEventClientSocket implements SegmentEventClient {
             throw new IllegalArgumentException("Events list is empty or null");
         }
 
-        String content = JSONUtil.toJsonStr(events);
+        String content = gson.toJson(events);
         if (StrUtil.isBlank(content)) {
             throw new IllegalArgumentException("Content is empty or null");
         }

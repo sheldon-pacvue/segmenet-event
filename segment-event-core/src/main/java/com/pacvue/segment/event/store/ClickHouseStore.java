@@ -3,7 +3,6 @@ package com.pacvue.segment.event.store;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import cn.hutool.json.JSONUtil;
 import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.segment.analytics.messages.Message;
 import lombok.Data;
@@ -180,7 +179,7 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
             ResultSet resultSet = statement.executeQuery(querySQL)) {
             List<Message> list = new ArrayList<>();
             while (resultSet.next()) {
-                Message event = JSONUtil.toBean(resultSet.getString("message"), Message.class);
+                Message event = gson.fromJson(resultSet.getString("message"), Message.class);
                 list.add(event);
             }
             return list;
