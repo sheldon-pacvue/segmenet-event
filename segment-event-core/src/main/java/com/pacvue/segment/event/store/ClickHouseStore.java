@@ -30,6 +30,7 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
     private final String tableName;
+    private final long loopIntervalMinutes;
     private MasterElection masterElection;
     private boolean subscribing = false;
 
@@ -93,7 +94,7 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
                     loopGetData(consumer);
                 }
             }
-        }, 1, TimeUnit.MINUTES);
+        }, loopIntervalMinutes, TimeUnit.MINUTES);
     }
 
     /**

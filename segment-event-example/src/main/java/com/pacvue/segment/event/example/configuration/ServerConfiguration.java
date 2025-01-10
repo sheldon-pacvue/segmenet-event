@@ -58,7 +58,7 @@ public class ServerConfiguration {
     public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) throws IOException {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
-        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName())
+        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName(), properties.getLoopIntervalMinutes())
                 .setMasterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"));
         clickHouseStore.createTableIfNotExists();
         return clickHouseStore;

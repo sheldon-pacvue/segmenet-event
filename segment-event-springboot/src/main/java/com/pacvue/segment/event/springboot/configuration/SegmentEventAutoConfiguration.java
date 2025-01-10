@@ -103,7 +103,7 @@ public class SegmentEventAutoConfiguration {
     public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
-        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName());
+        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName(), properties.getLoopIntervalMinutes());
         clickHouseStore.createTableIfNotExists();
         return clickHouseStore;
     }

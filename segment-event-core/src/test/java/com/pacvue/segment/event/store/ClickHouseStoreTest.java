@@ -18,7 +18,7 @@ class ClickHouseStoreTest {
     @BeforeAll
     static void setUp() throws IOException {
         DruidDataSource dataSource = new DruidDataSource();
-        Properties properties =new Properties();
+        Properties properties = new Properties();
         properties.setProperty("druid.driverClassName", "com.clickhouse.jdbc.ClickHouseDriver");
         properties.setProperty("druid.url", "jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true");
         properties.setProperty("druid.username", "default");
@@ -27,7 +27,7 @@ class ClickHouseStoreTest {
         properties.setProperty("druid.testWhileIdle", "true");
 
         dataSource.configFromPropeties(properties);
-        store = new ClickHouseStore(dataSource, "SegmentEventLog");
+        store = new ClickHouseStore(dataSource, "SegmentEventLog", 1);
         store.setMasterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"));
         store.createTableIfNotExists();
     }

@@ -17,4 +17,5 @@ public class ClickHouseStoreProperties {
     private boolean enabled;
     private Properties dataSourceProperties;
     private String tableName = "SegmentEventsLog";
+    private long loopIntervalMinutes = 1;
 }
