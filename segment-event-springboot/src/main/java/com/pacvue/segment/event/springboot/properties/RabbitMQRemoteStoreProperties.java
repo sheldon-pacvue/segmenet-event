@@ -12,7 +12,6 @@ import static com.pacvue.segment.event.springboot.properties.RabbitMQRemoteStore
 public class RabbitMQRemoteStoreProperties {
     public final static String PROPERTIES_PREFIX = "segment.event.rabbit.store";
 
-    private boolean enabled;
     private String uri;
     private String exchangeName;
     private String routingKey;

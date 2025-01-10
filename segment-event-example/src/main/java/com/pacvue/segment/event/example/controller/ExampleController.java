@@ -27,9 +27,6 @@ public class ExampleController {
     @Autowired
     private SegmentIO segmentIO;
 
-    @Autowired
-    private Analytics segmentAnalytics;
-
     @GetMapping("/503")
     public Mono<Integer> func503() throws InterruptedException {
         Thread.sleep(7000);
@@ -69,19 +66,6 @@ public class ExampleController {
         })))
         .flatMap(b -> Mono.just(b.toString()));
     }
-
-    /**
-     * Right
-     *
-     * @return
-     */
-    @GetMapping("/hello/right3")
-    public Mono<String> right3() {
-        segmentAnalytics.enqueue(TrackMessage.builder("hello-right3").userId("123").anonymousId("123").sentAt(new Date()));
-
-        return Mono.just("right3");
-    }
-
 
 
     /**
