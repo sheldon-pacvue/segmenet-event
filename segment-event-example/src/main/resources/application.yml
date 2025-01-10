@@ -4,6 +4,8 @@ spring:
     port: 9090
 
 segment:
+  analytics:
+    writeKey: "qweqwe"
   event:
     clickhouse:
       store:

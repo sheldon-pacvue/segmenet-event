@@ -1,22 +1,36 @@
 package com.pacvue.segment.event.store;
 
-import cn.hutool.core.util.SerializeUtil;
-import com.pacvue.segment.event.generator.SegmentEvent;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import com.rabbitmq.client.*;
+import com.segment.analytics.gson.AutoValueAdapterFactory;
+import com.segment.analytics.gson.ISO8601DateAdapter;
+import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.Data;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 @Slf4j
 @Data
 @Builder
-public class RabbitMQDistributedStore implements Store<Void> {
+public class RabbitMQDistributedStore implements Store<Message> {
+    private static final Gson gson = new GsonBuilder()
+            .registerTypeAdapterFactory(new AutoValueAdapterFactory())
+            .registerTypeAdapter(Date.class, new ISO8601DateAdapter())
+            .create();
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -26,11 +40,17 @@ public class RabbitMQDistributedStore implements Store<Void> {
     private String consumerTag;
 
 
+
     // 发布消息
-    public Mono<Boolean> publish(SegmentEvent event, Void v) {
+    public Mono<Boolean> publish(Message event) {
         return Mono.fromCallable(() -> {
             try {
-                channel.basicPublish(exchangeName, routingKey, null, SerializeUtil.serialize(event));
+                // 创建消息属性
+                AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
+                        .contentType("application/json")
+                        .headers(Map.of("type", event.getClass().getName())) // 设置类型信息
+                        .build();
+                channel.basicPublish(exchangeName, routingKey, props, gson.toJson(event).getBytes(StandardCharsets.UTF_8));
                 log.debug("event publish success, event：{}", event);
                 return Boolean.TRUE;
             } catch (IOException e) {
@@ -42,14 +62,21 @@ public class RabbitMQDistributedStore implements Store<Void> {
 
     // 订阅消息
     @Override
-    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
+    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
         try {
             this.consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
+                @SneakyThrows
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
                     // 为了保留范型适配，这里必须进行类型强转，否则将导致类型转换错误
-                    @SuppressWarnings("unchecked")
-                    List<SegmentEvent> eventList = List.of((SegmentEvent) SerializeUtil.deserialize(body));
+                    // 从消息头提取类型信息
+                    String type = properties.getHeaders().get("type").toString();
+                    Class<?> clazz = Class.forName(type);
+                    // 动态加载类
+                    Type resultType = TypeToken.get(clazz).getType();
+                    Message event = gson.fromJson(new String(body, StandardCharsets.UTF_8), resultType);
+
+                    List<Message> eventList = List.of(event);
                     consumer.accept(eventList);
                 }
             });

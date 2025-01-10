@@ -1,9 +1,8 @@
 package com.pacvue.segment.event.store;
 
-import com.pacvue.segment.event.generator.SegmentEvent;
+import com.segment.analytics.messages.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -13,13 +12,13 @@ import java.util.function.Consumer;
 
 @Slf4j
 @RequiredArgsConstructor
-public class ReactorLocalStore implements Store<Void> {
-    private Sinks.Many<SegmentEvent> sink = Sinks.many().multicast().onBackpressureBuffer(); // 外部持有 FluxSink 引用
+public class ReactorLocalStore implements Store<Message> {
+    private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer(); // 外部持有 FluxSink 引用
     private final int bufferTimeoutSeconds;
     private boolean subscribing = false;
 
     @Override
-    public Mono<Boolean> publish(SegmentEvent event, Void v) {
+    public Mono<Boolean> publish(Message event) {
         Sinks.EmitResult emitResult = sink.tryEmitNext(event);
         if (emitResult.isFailure()) {
             log.debug("event publish failed, event：{}, reason: {}", event, emitResult);
@@ -30,7 +29,7 @@ public class ReactorLocalStore implements Store<Void> {
     }
 
     @Override
-    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
+    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
         if (subscribing) { return; }
         this.subscribing = true;
         sink.asFlux().bufferTimeout(bundleCount, Duration.ofSeconds(bufferTimeoutSeconds))

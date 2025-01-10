@@ -1,6 +1,6 @@
 package com.pacvue.segment.event.store;
 
-import com.pacvue.segment.event.entity.SegmentEventTrace;
+import com.segment.analytics.messages.TrackMessage;
 import org.junit.jupiter.api.Test;
 
 
@@ -17,9 +17,7 @@ class ReactorLocalStoreTest {
         reactorLocalStore.subscribe(System.out::println, 2);
         reactorLocalStore.stopScribe();
         reactorLocalStore.subscribe(System.out::println, 2);
-        SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-        segmentEventTrace.setUserId("1");
-        reactorLocalStore.publish(segmentEventTrace).subscribe();
+        reactorLocalStore.publish(TrackMessage.builder("11").userId("1").build()).subscribe();
         Thread.sleep(4000);
     }
 
@@ -31,9 +29,7 @@ class ReactorLocalStoreTest {
     public void test2() throws InterruptedException {
         reactorLocalStore.subscribe(System.out::println, 2);
         reactorLocalStore.subscribe(System.out::println, 2);
-        SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-        segmentEventTrace.setUserId("1");
-        reactorLocalStore.publish(segmentEventTrace).subscribe();
+        reactorLocalStore.publish(TrackMessage.builder("11").userId("1").build()).subscribe();
         Thread.sleep(4000);
     }
 
@@ -41,14 +37,13 @@ class ReactorLocalStoreTest {
     public void test20() throws InterruptedException {
         reactorLocalStore.subscribe(System.out::println, 2);
         for (int i = 0; i < 5; i++) {
-            SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            reactorLocalStore.publish(segmentEventTrace).subscribe();
+            reactorLocalStore.publish(TrackMessage.builder(String.valueOf(i)).build()).subscribe();
+
         }
         reactorLocalStore.stopScribe();
         reactorLocalStore.subscribe(System.out::println, 2);
         for (int i = 5; i < 10; i++) {
-            SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            reactorLocalStore.publish(segmentEventTrace).subscribe();
+            reactorLocalStore.publish(TrackMessage.builder(String.valueOf(i)).build()).subscribe();
         }
         Thread.sleep(4000);
     }

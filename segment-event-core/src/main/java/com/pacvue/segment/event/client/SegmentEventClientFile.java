@@ -2,7 +2,7 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
-import com.pacvue.segment.event.generator.SegmentEvent;
+import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -31,7 +31,7 @@ public class SegmentEventClientFile implements SegmentEventClient {
     }
 
     @Override
-    public Mono<Boolean> send(List<SegmentEvent> events) {
+    public Mono<Boolean> send(List<Message> events) {
         return Mono.create(sink -> {
             bundle(false);
 

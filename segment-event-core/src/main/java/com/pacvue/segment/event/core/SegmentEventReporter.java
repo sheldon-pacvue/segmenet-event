@@ -1,10 +1,11 @@
 package com.pacvue.segment.event.core;
 
 import com.pacvue.segment.event.client.SegmentEventClient;
+import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
-import com.pacvue.segment.event.generator.SegmentEvent;
 import com.pacvue.segment.event.metric.MetricsCounter;
+import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -23,9 +24,9 @@ public final class SegmentEventReporter {
     private final SegmentEventClientRegistry registry;
 
     @Builder.Default
-    private Class<? extends SegmentEventClient> defaultClientClass = SegmentEventClientHttp.class;
+    private Class<? extends SegmentEventClient> defaultClientClass = SegmentEventClientAnalytics.class;
 
-    public Mono<Boolean> report(List<SegmentEvent> events, Class<? extends SegmentEventClient> clazz) {
+    public Mono<Boolean> report(List<Message> events, Class<? extends SegmentEventClient> clazz) {
         SegmentEventClient client = registry.getClient(clazz);
         return client.send(events)
                 .doOnSuccess(b -> {
@@ -40,7 +41,7 @@ public final class SegmentEventReporter {
     }
 
 
-    public Mono<Boolean> reportDefault(List<SegmentEvent> events) {
+    public Mono<Boolean> reportDefault(List<Message> events) {
         return report(events, defaultClientClass);
     }
 }

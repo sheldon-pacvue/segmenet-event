@@ -49,6 +49,19 @@
         <version>${revision}</version>
       </dependency>
 
+      <!-- segment 官方包 -->
+      <dependency>
+        <groupId>com.segment.analytics.java</groupId>
+        <artifactId>analytics</artifactId>
+        <version>3.5.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.segment.analytics.java</groupId>
+        <artifactId>analytics-spring-boot-starter</artifactId>
+        <version>3.5.1</version>
+      </dependency>
+
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-parent</artifactId>
@@ -210,19 +223,22 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
+          <forceJavacCompilerUse>true</forceJavacCompilerUse>
+          <showWarnings>true</showWarnings>
           <skip>true</skip>
           <!-- 设置编译的 Java 源版本 -->
-          <source>17</source>
+          <source>${java.version}</source>
           <!-- 设置编译后的字节码版本 -->
-          <target>17</target>
+          <target>${java.version}</target>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>flatten-maven-plugin</artifactId>
         <version>1.6.0</version>
         <configuration>
-          <flattenMode>oss</flattenMode>
+          <flattenMode>resolveAll</flattenMode>
         </configuration>
         <executions>
           <!-- enable flattening -->

@@ -3,10 +3,8 @@ package com.pacvue.segment.event.store;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
-import com.pacvue.segment.event.entity.SegmentEventClassRegistry;
-import com.pacvue.segment.event.entity.SegmentEventOptional;
-import com.pacvue.segment.event.entity.annotation.SegmentEventType;
-import com.pacvue.segment.event.generator.SegmentEvent;
+import com.pacvue.segment.event.entity.SegmentPersistingMessage;
+import com.segment.analytics.messages.Message;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -16,17 +14,19 @@ import reactor.core.publisher.Mono;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import javax.sql.*;
 
-import static com.pacvue.segment.event.entity.SegmentEventOptional.LOG_OPERATION_SEND_TO_SEGMENT;
+import static com.pacvue.segment.event.entity.SegmentPersistingMessage.LOG_OPERATION_SEND_TO_SEGMENT;
+
 
 @Data
 @RequiredArgsConstructor
 @Accessors(chain = true)
 @Slf4j
-public class ClickHouseStore implements Store<SegmentEventOptional> {
+public class ClickHouseStore implements Store<SegmentPersistingMessage> {
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
     private final String tableName;
@@ -35,11 +35,11 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
 
 
     @Override
-    public Mono<Boolean> publish(SegmentEvent event, SegmentEventOptional optional) {
+    public Mono<Boolean> publish(SegmentPersistingMessage event) {
         try {
             return Mono.defer(() -> {
                 try {
-                    return Mono.just(insertData(event, optional));
+                    return Mono.just(insertData(event));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -49,13 +49,14 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         }
     }
 
+
     /**
      * 从数据库中查询，并且自动上报未成功上报数据
      * 注意分布式问题，如果未实现master竞争机制，则无法使用该方法，使用zookeeper，redis等其他分布式系统进行竞争master
      * 需要循环进行查询，直到查询不到数据,睡眠5分钟，然后重试
      */
     @Override
-    public void subscribe(Consumer<List<SegmentEvent>> consumer, int bundleCount) {
+    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
         if (subscribing) {
             return;
         }
@@ -73,13 +74,13 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         this.subscribing = false;
     }
 
-    private void loopGetData(Consumer<List<SegmentEvent>> consumer) {
+    private void loopGetData(Consumer<List<Message>> consumer) {
         executor.schedule(() -> {
             try {
                 if (null == masterElection || !masterElection.isMaster()) {
                     return;
                 }
-                List<SegmentEvent> events = queryData();
+                List<Message> events = queryData();
                 log.info("form db data size: {}", events.size());
                 if (events.isEmpty()) {
                     return;
@@ -132,7 +133,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         }
     }
 
-    private boolean insertData(SegmentEvent event, SegmentEventOptional optional) {
+    private boolean insertData(SegmentPersistingMessage event) {
         // 插入的SQL语句
         String insertSQL = """
             INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
@@ -141,15 +142,15 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
 
         try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
             // 插入多条记录
-            preparedStatement.setDate(1, DateUtil.date(event.getTimestamp()).toSqlDate());  // eventDate
+            preparedStatement.setDate(1, Objects.requireNonNull(DateUtil.date(event.sentAt())).toSqlDate());  // eventDate
             preparedStatement.setString(2, DigestUtil.md5Hex(JSONUtil.toJsonStr(event)));  // hash
-            preparedStatement.setString(3, event.getUserId());  // userId
-            preparedStatement.setString(4, event.getClass().getAnnotation(SegmentEventType.class).value());  // type
+            preparedStatement.setString(3, event.userId());  // userId
+            preparedStatement.setString(4, event.type().name());  // type
             preparedStatement.setString(5, JSONUtil.toJsonStr(event));  // message
-            preparedStatement.setInt(6, optional.isResult() ? 1 : 0);  // result (UInt8)
-            preparedStatement.setInt(7, optional.getOperation());  // operation
+            preparedStatement.setBoolean(6, event.result());  // result (UInt8)
+            preparedStatement.setInt(7, event.operation());  // operation
             preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
-            preparedStatement.setLong(9, event.getTimestamp());  // eventTime
+            preparedStatement.setLong(9, Objects.requireNonNull(DateUtil.date(event.sentAt())).toTimestamp().getTime());  // eventTime
 
             boolean result = preparedStatement.execute();
             log.debug("Data inserted successfully!, result: {}", result);
@@ -159,7 +160,7 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
         }
     }
 
-    private List<SegmentEvent> queryData() throws Exception {
+    private List<Message> queryData() throws Exception {
         String querySQL = """
                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
                         MAX(message) as message, MIN(eventTime) as eventTime
@@ -174,11 +175,9 @@ public class ClickHouseStore implements Store<SegmentEventOptional> {
 
         try (Statement statement = dataSource.getConnection().createStatement();
             ResultSet resultSet = statement.executeQuery(querySQL)) {
-            List<SegmentEvent> list = new ArrayList<>();
+            List<Message> list = new ArrayList<>();
             while (resultSet.next()) {
-                Class<? extends SegmentEvent> clazz = SegmentEventClassRegistry.getSegmentEventClass(
-                        resultSet.getString("type"));
-                SegmentEvent event = JSONUtil.toBean(resultSet.getString("message"), clazz);
+                Message event = JSONUtil.toBean(resultSet.getString("message"), Message.class);
                 list.add(event);
             }
             return list;

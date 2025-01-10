@@ -20,6 +20,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.segment.analytics.java</groupId>
+      <artifactId>analytics</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>io.projectreactor.netty</groupId>
       <artifactId>reactor-netty-http</artifactId>
     </dependency>

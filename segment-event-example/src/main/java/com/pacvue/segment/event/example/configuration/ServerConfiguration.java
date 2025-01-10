@@ -4,18 +4,19 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClientFile;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
-import com.pacvue.segment.event.entity.SegmentEventOptional;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
+import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.springboot.configuration.SegmentEventAutoConfiguration;
-import com.pacvue.segment.event.springboot.properties.ClickHouseDBStoreProperties;
+import com.pacvue.segment.event.springboot.properties.ClickHouseStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientFileProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientSocketProperties;
 import com.pacvue.segment.event.store.ClickHouseStore;
 import com.pacvue.segment.event.store.Store;
 import com.pacvue.segment.event.store.ZookeeperMasterElection;
+import com.segment.analytics.messages.Message;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -23,11 +24,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 
 
 @Configuration
-@ImportAutoConfiguration(SegmentEventAutoConfiguration.class)
+@ImportAutoConfiguration({
+        SegmentEventAutoConfiguration.class,
+})
 public class ServerConfiguration {
 
     @Bean
@@ -52,8 +54,8 @@ public class ServerConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @Qualifier("dbStore")
-    public Store<SegmentEventOptional> dbStore(ClickHouseDBStoreProperties properties) throws IOException {
+    @Qualifier("persistingStore")
+    public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) throws IOException {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
         ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName())
@@ -65,12 +67,12 @@ public class ServerConfiguration {
 
     @Bean
     public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
-                               @Qualifier("distributedStore") Store<Void> distributedStore,
-                               @Qualifier("dbStore") Store<SegmentEventOptional> dbStore) {
+                               @Qualifier("distributedStore") Store<Message> distributedStore,
+                               @Qualifier("persistingStore") Store<SegmentPersistingMessage> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
-                .dbStore(dbStore)
+                .persistingStore(persistingStore)
                 .build().start();
     }
 }

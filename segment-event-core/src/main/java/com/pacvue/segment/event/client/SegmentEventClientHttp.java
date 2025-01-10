@@ -2,7 +2,7 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
-import com.pacvue.segment.event.generator.SegmentEvent;
+import com.segment.analytics.messages.Message;
 import io.netty.handler.codec.http.*;
 import lombok.*;
 import lombok.experimental.Accessors;
@@ -33,10 +33,10 @@ public class SegmentEventClientHttp implements SegmentEventClient {
     private final Consumer<? super HttpHeaders> headerBuilder;
     @Builder.Default
     @NonNull
-    private final Function<List<SegmentEvent>, Mono<String>> bodyJsonFactory = Body::generate;
+    private final Function<List<Message>, Mono<String>> bodyJsonFactory = Body::generate;
 
     @Override
-    public Mono<Boolean> send(List<SegmentEvent> events) {
+    public Mono<Boolean> send(List<Message> events) {
         return httpClient
                 .headers(headers-> {
                     headers.add(HttpHeaderNames.AUTHORIZATION, secret);
@@ -66,10 +66,10 @@ public class SegmentEventClientHttp implements SegmentEventClient {
     public static class Body {
         public final static String SEND_AT_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
 
-        private List<SegmentEvent> batch;
+        private List<Message> batch;
         private String sendAt;
 
-        public static Mono<String> generate(List<SegmentEvent> events) {
+        public static Mono<String> generate(List<Message> events) {
             Body body = new Body().setBatch(events).setSendAt(DateUtil.format(new Date(), SEND_AT_FORMAT));
             return Mono.just(JSONUtil.toJsonStr(body));
         }

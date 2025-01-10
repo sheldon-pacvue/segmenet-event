@@ -2,10 +2,13 @@ package com.pacvue.segment.event.example.controller;
 
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentEventTrace;
+import com.segment.analytics.Analytics;
+import com.segment.analytics.internal.AnalyticsClient;
+import com.segment.analytics.messages.TrackMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +25,9 @@ public class ExampleController {
     @Autowired
     private SegmentIO segmentIO;
 
+    @Autowired
+    private Analytics segmentAnalytics;
+
     @GetMapping("/503")
     public Mono<Integer> func503() throws InterruptedException {
         Thread.sleep(7000);
@@ -37,14 +43,11 @@ public class ExampleController {
     public Mono<String> right() {
         return Mono.deferContextual(ctx -> {
             ServerWebExchange context = ctx.get(ServerWebExchange.class);
-            segmentIO.trace(clazz -> Mono.defer(() -> {
+            segmentIO.track(() -> {
                 String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
                 log.info("userId: {}", userId);
-
-                SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-                segmentEventTrace.setUserId(userId);
-                return Mono.just(segmentEventTrace);
-            }));
+                return Mono.just(TrackMessage.builder("hello-right").userId(userId));
+            });
             return Mono.just("right");
         });
     }
@@ -56,18 +59,27 @@ public class ExampleController {
      */
     @GetMapping("/hello/right2")
     public Mono<String> right2() {
-        return Mono.defer(() -> segmentIO.deliverReact(clazz -> Mono.deferContextual(ctx -> {
+        return Mono.defer(() -> segmentIO.deliverReact(() -> Mono.deferContextual(ctx -> {
             ServerWebExchange context = ctx.get(ServerWebExchange.class);
             String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
             log.info("userId: {}", userId);
-
-            SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            segmentEventTrace.setUserId(userId);
-
-            return Mono.just(segmentEventTrace);
-        }), SegmentEventTrace.class))
-                .flatMap(b -> Mono.just(b.toString()));
+            return Mono.just(TrackMessage.builder("hello-right2").userId(userId));
+        })))
+        .flatMap(b -> Mono.just(b.toString()));
     }
+
+    /**
+     * Right
+     *
+     * @return
+     */
+    @GetMapping("/hello/right3")
+    public Mono<String> right3() {
+        segmentAnalytics.enqueue(TrackMessage.builder("hello-right3").userId("123").anonymousId("123"));
+
+        return Mono.just("right3");
+    }
+
 
 
     /**
@@ -77,13 +89,11 @@ public class ExampleController {
      */
     @GetMapping("/hello/wrong")
     public Mono<String> wrong() {
-        segmentIO.trace(clazz -> Mono.deferContextual((ctx) -> {
+        segmentIO.track(() -> Mono.deferContextual((ctx) -> {
             ServerWebExchange context = ctx.getOrDefault(ServerWebExchange.class, null);
             String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
             log.info("userId: {}", userId);
-            SegmentEventTrace segmentEventTrace = new SegmentEventTrace();
-            segmentEventTrace.setUserId(userId);
-            return Mono.just(segmentEventTrace);
+            return Mono.just(TrackMessage.builder("hello-wrong").userId(userId));
         }));
         return Mono.just("wrong");
     }

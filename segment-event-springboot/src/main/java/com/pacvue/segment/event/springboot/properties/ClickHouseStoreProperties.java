@@ -6,12 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Properties;
 
-import static com.pacvue.segment.event.springboot.properties.ClickHouseDBStoreProperties.PROPERTIES_PREFIX;
+import static com.pacvue.segment.event.springboot.properties.ClickHouseStoreProperties.PROPERTIES_PREFIX;
 
 @Data
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
-public class ClickHouseDBStoreProperties {
+public class ClickHouseStoreProperties {
     public final static String PROPERTIES_PREFIX = "segment.event.clickhouse.store";
 
     private boolean enabled;
