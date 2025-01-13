@@ -1,5 +1,8 @@
 # SegmentEventClient
 
+## Design Preview
+![Design Preview](assets/SegmentEvent-V2.drawio.svg)
+
 ## Installation
 ```xml
 <dependencies>
@@ -25,9 +28,6 @@
     </dependency>
 </dependencies>
 ```
-
-## The Design 
-![The Design](assets/SegmentEvent-V2.drawio.svg)
 
 ## How to initialize
 [ServerConfiguration](https://github.com/sheldon-pacvue/segmenet-event-client/blob/main/segment-event-example/src/main/java/com/pacvue/segment/event/example/configuration/ServerConfiguration.java)
