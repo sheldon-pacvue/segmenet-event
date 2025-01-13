@@ -3,6 +3,8 @@ package com.pacvue.segment.event.client;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import com.segment.analytics.messages.Message;
+import lombok.Builder;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -15,15 +17,17 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+@Builder
 @Slf4j
 public class SegmentEventClientFile implements SegmentEventClient {
     private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
     private final String path;
     private final String fileName;
-    private final long maxFileSizeMb;
+    @Builder.Default
+    private long maxFileSizeMb = 100 * FILE_SIZE_UNIT;
 
-    public SegmentEventClientFile(String path, String fileName, long maxFileSizeMb) {
+    public SegmentEventClientFile(@NonNull String path, @NonNull String fileName, long maxFileSizeMb) {
         this.path = path;
         this.fileName = fileName;
         this.maxFileSizeMb = maxFileSizeMb * FILE_SIZE_UNIT;

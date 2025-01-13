@@ -8,8 +8,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -22,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@Builder
 @Slf4j
 public class SegmentEventClientSocket implements SegmentEventClient {
     private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -31,16 +34,13 @@ public class SegmentEventClientSocket implements SegmentEventClient {
     private static final String DEFAULT_LIB_VERSION = "0.0.0";
     private final String host;
     private final int port;
-
-    @NonNull
     private final String secret;
-
     private final String endPoint;
 
     private volatile Socket socket;
     private long lastActivityTime;  // 上次活动时间
 
-    public SegmentEventClientSocket(String host, int port, String secret, String endPoint) {
+    SegmentEventClientSocket(@NonNull String host, int port, @NotNull String secret, @NonNull String endPoint) {
         this.host = host;
         this.port = port;
         this.secret = secret;

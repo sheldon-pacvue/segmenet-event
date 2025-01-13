@@ -5,7 +5,7 @@ spring:
 
 segment:
   analytics:
-    writeKey: "qweqwe"
+    writeKey: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
   event:
     store:
       clickhouse:

@@ -2,6 +2,7 @@ package com.pacvue.segment.event.example.configuration;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClientFile;
+import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.client.SegmentEventClientSocket;
 import com.pacvue.segment.event.core.SegmentEventReporter;
@@ -22,13 +23,20 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
@@ -42,12 +50,48 @@ public class ServerConfiguration {
 
     @Bean
     public SegmentEventClientFile segmentEventClientFile(SegmentEventClientFileProperties properties) {
-        return new SegmentEventClientFile(properties.getPath(), properties.getFileName(), properties.getMaxFileSizeMb());
+        return SegmentEventClientFile.builder()
+                .path(properties.getPath())
+                .fileName(properties.getFileName())
+                .maxFileSizeMb(properties.getMaxFileSizeMb())
+                .build();
     }
 
     @Bean
     public SegmentEventClientSocket segmentEventClientSocket(SegmentEventClientSocketProperties properties) {
-        return new SegmentEventClientSocket(properties.getHost(), properties.getPort(), properties.getSecret(), properties.getEndPoint());
+        return SegmentEventClientSocket.builder()
+                .host(properties.getHost())
+                .port(properties.getPort())
+                .secret(properties.getSecret())
+                .endPoint(properties.getEndPoint())
+                .build();
+    }
+
+    @Bean
+    public SegmentEventClientHttp segmentEventClientHttp(SegmentEventClientHttpProperties properties) {
+        // 设置 ConnectionProvider 配置
+        ConnectionProvider provider = ConnectionProvider.builder("segment-event-client")
+                .maxConnections(properties.getMaxConnections())  // 最大连接数
+                .maxIdleTime(Duration.ofSeconds(properties.getMaxIdleTime()))  // 最大空闲时间
+                .maxLifeTime(Duration.ofSeconds(properties.getMaxLifeTime()))  // 最大生命周期
+                .pendingAcquireMaxCount(properties.getPendingAcquireMaxCount())  // 最大并发请求数
+                .pendingAcquireTimeout(Duration.ofSeconds(properties.getPendingAcquireTimeout()))  // 获取连接的最大等待时间
+                .build();
+
+        // 创建 HttpClient 实例
+        HttpClient httpClient = HttpClient.create(provider)
+                .baseUrl(properties.getBaseUrl())  // 设置基础 URL
+                .responseTimeout(Duration.ofSeconds(properties.getResponseTimeout()))  // 设置响应超时
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, properties.getConnectionTimeout())  // 设置连接超时
+                .doOnConnected(conn -> conn.addHandlerLast(new ReadTimeoutHandler(properties.getReadTimeout(), TimeUnit.SECONDS))  // 设置读取超时
+                        .addHandlerLast(new WriteTimeoutHandler(properties.getWriteTimeout(), TimeUnit.SECONDS)));  // 设置写入超时
+
+        return SegmentEventClientHttp.builder()
+                .httpClient(httpClient)
+                .uri(properties.getUri())
+                .method(properties.getMethod())
+                .retry(properties.getRetry())
+                .secret(properties.getSecret()).build();
     }
 
     @Bean
