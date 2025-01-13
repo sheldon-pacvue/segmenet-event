@@ -57,12 +57,6 @@
       </dependency>
 
       <dependency>
-        <groupId>com.segment.analytics.java</groupId>
-        <artifactId>analytics-spring-boot-starter</artifactId>
-        <version>3.5.1</version>
-      </dependency>
-
-      <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-parent</artifactId>
         <version>1.5.11</version>

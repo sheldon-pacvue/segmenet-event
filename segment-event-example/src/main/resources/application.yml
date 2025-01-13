@@ -4,8 +4,6 @@ spring:
     port: 9090
 
 segment:
-  analytics:
-    writeKey: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
   event:
     store:
       clickhouse:
@@ -25,7 +23,7 @@ segment:
         queueName: segment-event-example
     client:
       http:
-        secret: "123123"
+        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
         base-url: "http://localhost:8080"
       file:
         path: "segment"
@@ -35,7 +33,9 @@ segment:
         end-point: "/v1/import"
         host: "localhost"
         port: 9090
-        secret: "123123"
+        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
+      analytics:
+        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
 management:
   endpoints:
     web:

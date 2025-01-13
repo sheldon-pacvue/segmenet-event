@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -95,7 +96,7 @@ public class ServerConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty({"segment.analytics.writeKey"})
+    @ConditionalOnBean(Analytics.class)
     public SegmentEventClientAnalytics segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
         return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
     }
