@@ -3,15 +3,17 @@ package com.pacvue.segment.event.client;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.internal.AnalyticsClient;
 import com.segment.analytics.messages.Message;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
 import java.util.List;
 
+@Slf4j
 public class SegmentEventClientAnalytics implements SegmentEventClient {
     private final AnalyticsClient client;
 
-    public SegmentEventClientAnalytics(Analytics analytics) throws NoSuchFieldException, IllegalAccessException {
+    SegmentEventClientAnalytics(Analytics analytics) throws NoSuchFieldException, IllegalAccessException {
         Field field = Analytics.class.getDeclaredField("client");
         field.setAccessible(true); // 允许访问私有字段
         this.client = (AnalyticsClient) field.get(analytics);

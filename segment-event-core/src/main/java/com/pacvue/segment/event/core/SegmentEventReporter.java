@@ -7,6 +7,7 @@ import com.pacvue.segment.event.metric.MetricsCounter;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NonNull;
 import reactor.core.publisher.Mono;
 
@@ -16,12 +17,14 @@ import java.util.*;
 @Data
 @Builder
 public final class SegmentEventReporter {
+    @Getter
     private final MetricsCounter metricsCounter;
 
     @NonNull
     private final SegmentEventClientRegistry registry;
 
     @Builder.Default
+    @Getter
     private Class<? extends SegmentEventClient> defaultClientClass = SegmentEventClientAnalytics.class;
 
     public Mono<Boolean> report(List<Message> events, Class<? extends SegmentEventClient> clazz) {

@@ -2,6 +2,7 @@ package com.pacvue.segment.event.core;
 
 import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.pacvue.segment.event.generator.*;
+import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.store.ReactorLocalStore;
 import com.pacvue.segment.event.store.Store;
 import com.segment.analytics.MessageInterceptor;
@@ -48,12 +49,24 @@ public final class SegmentIO  {
      */
     public void start() {
         // 分布式仓库中的数据取出后，存入本地buffer仓库，用于批量上报
-        Optional.ofNullable(distributedStore).ifPresent(store -> store.accept(list -> list.forEach(bufferStore::commit)));
+        log.info("SegmentIO start");
+        Optional.ofNullable(distributedStore).ifPresent(store -> {
+            store.accept(list -> list.forEach(bufferStore::commit));
+            log.info("SegmentIO distributedStore started");
+        });
         // 从持久化仓库中获取未发送的数据进行补发
-        Optional.ofNullable(persistingStore).ifPresent(store -> store.accept(list -> list.forEach(bufferStore::commit)));
+        Optional.ofNullable(persistingStore).ifPresent(store -> {
+            store.accept(list -> list.forEach(bufferStore::commit));
+            log.info("SegmentIO persistingStore started");
+        });
         // 本地buffer仓库的数据超出阈值后，进行上报
         bufferStore.accept(this::handleReport);
-        log.info("SegmentIO start");
+        log.info("SegmentIO bufferStore started");
+        log.info("SegmentIO reporter client {} started", reporter.getDefaultClientClass().getSimpleName());
+        MetricsCounter metricsCounter = reporter.getMetricsCounter();
+        if (null != metricsCounter) {
+            log.info("SegmentIO metrics {} started", metricsCounter.getClass().getSimpleName());
+        }
     }
 
 

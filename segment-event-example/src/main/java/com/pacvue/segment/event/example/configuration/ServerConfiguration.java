@@ -1,10 +1,7 @@
 package com.pacvue.segment.event.example.configuration;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.pacvue.segment.event.client.SegmentEventClientFile;
-import com.pacvue.segment.event.client.SegmentEventClientHttp;
-import com.pacvue.segment.event.client.SegmentEventClientRegistry;
-import com.pacvue.segment.event.client.SegmentEventClientSocket;
+import com.pacvue.segment.event.client.*;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentPersistingMessage;
@@ -21,11 +18,14 @@ import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.segment.analytics.Analytics;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.netty.http.client.HttpClient;
@@ -95,6 +95,12 @@ public class ServerConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty({"segment.analytics.writeKey"})
+    public SegmentEventClientAnalytics segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
+        return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
+    }
+
+    @Bean
     public MetricsCounter metricsCounter(MeterRegistry meterRegistry, SegmentEventPrometheusMetricsProperties properties) {
         return SpringPrometheusMetricsCounter.builder(meterRegistry, properties.getName())
                 .tags(properties.getTags())
@@ -103,7 +109,10 @@ public class ServerConfiguration {
 
     @Bean
     public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry, MetricsCounter metricsCounter) {
-        return SegmentEventReporter.builder().registry(segmentEventClientRegistry).metricsCounter(metricsCounter).defaultClientClass(SegmentEventClientSocket.class).build();
+        return SegmentEventReporter.builder()
+                .registry(segmentEventClientRegistry)
+                .metricsCounter(metricsCounter)
+                .build();
     }
 
     @Bean

@@ -37,12 +37,6 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentEventClientRegistry segmentEventClientRegistry(List<? extends SegmentEventClient> clients) {
-        return new SpringSegmentEventClientRegistry(clients);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
     public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry) {
         return SegmentEventReporter.builder().registry(segmentEventClientRegistry).build();
     }

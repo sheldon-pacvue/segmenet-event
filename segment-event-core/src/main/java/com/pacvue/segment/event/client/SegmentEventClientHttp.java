@@ -17,7 +17,6 @@ import java.util.function.Function;
 
 @Slf4j
 @Builder
-@RequiredArgsConstructor
 public class SegmentEventClientHttp implements SegmentEventClient {
     @NonNull
     private final HttpClient httpClient;
@@ -73,6 +72,4 @@ public class SegmentEventClientHttp implements SegmentEventClient {
             return Mono.just(gson.toJson(body));
         }
     }
-
-
 }

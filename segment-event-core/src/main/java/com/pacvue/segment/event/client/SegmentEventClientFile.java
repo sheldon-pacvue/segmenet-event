@@ -2,9 +2,11 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
+import com.segment.analytics.Analytics;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -17,17 +19,15 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-@Builder
 @Slf4j
 public class SegmentEventClientFile implements SegmentEventClient {
     private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
     private final String path;
     private final String fileName;
-    @Builder.Default
     private long maxFileSizeMb = 100 * FILE_SIZE_UNIT;
 
-    public SegmentEventClientFile(@NonNull String path, @NonNull String fileName, long maxFileSizeMb) {
+    SegmentEventClientFile(@NonNull String path, @NonNull String fileName, long maxFileSizeMb) {
         this.path = path;
         this.fileName = fileName;
         this.maxFileSizeMb = maxFileSizeMb * FILE_SIZE_UNIT;
@@ -129,4 +129,34 @@ public class SegmentEventClientFile implements SegmentEventClient {
 
     // 预留扩展，如果后续需要对zip文件进行处理，可以通过重写该方法实现，比如将文件上传到S3
     protected void afterCompressFile(File zipFile) {}
+
+
+    public static SegmentEventClientFile.Builder builder() {
+        return new SegmentEventClientFile.Builder();
+    }
+
+    public static class Builder {
+        private String path;
+        private String fileName;
+        private long maxFileSizeMb = 100;
+
+        public SegmentEventClientFile.Builder path(String path) {
+            this.path = path;
+            return this;
+        }
+
+        public SegmentEventClientFile.Builder fileName(String fileName) {
+            this.fileName = fileName;
+            return this;
+        }
+
+        public SegmentEventClientFile.Builder maxFileSizeMb(long maxFileSizeMb) {
+            this.maxFileSizeMb = maxFileSizeMb;
+            return this;
+        }
+
+        public SegmentEventClientFile build() {
+            return new SegmentEventClientFile(path, fileName, maxFileSizeMb);
+        }
+    }
 }

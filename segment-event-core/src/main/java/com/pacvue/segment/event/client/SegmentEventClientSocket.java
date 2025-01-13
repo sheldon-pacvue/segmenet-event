@@ -8,7 +8,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@Builder
 @Slf4j
 public class SegmentEventClientSocket implements SegmentEventClient {
     private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -134,5 +132,40 @@ public class SegmentEventClientSocket implements SegmentEventClient {
         }
 
         return new String[]{libName, libVersion};
+    }
+
+    public static SegmentEventClientSocket.Builder builder() {
+        return new SegmentEventClientSocket.Builder();
+    }
+
+    public static class Builder {
+        private String host;
+        private int port;
+        private String secret;
+        private String endPoint;
+
+        public Builder host(String host) {
+            this.host = host;
+            return this;
+        }
+
+        public Builder port(int port) {
+            this.port = port;
+            return this;
+        }
+
+        public Builder secret(String secret) {
+            this.secret = secret;
+            return this;
+        }
+
+        public Builder endPoint(String endPoint) {
+            this.endPoint = endPoint;
+            return this;
+        }
+
+        public SegmentEventClientSocket build() {
+            return new SegmentEventClientSocket(host, port, secret, endPoint);
+        }
     }
 }
