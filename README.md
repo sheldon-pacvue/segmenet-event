@@ -1,7 +1,6 @@
-## Segment Event Client
+# SegmentEventClient
 
-
-## Install
+## Installation
 ```xml
 <dependencies>
     <!-- not spring framework -->
@@ -26,3 +25,24 @@
     </dependency>
 </dependencies>
 ```
+
+## The Design 
+![The Design](assets/SegmentEvent-V2.drawio.svg)
+
+## How to initialize
+[ServerConfiguration](https://github.com/sheldon-pacvue/segmenet-event-client/blob/main/segment-event-example/src/main/java/com/pacvue/segment/event/example/configuration/ServerConfiguration.java)
+
+## How to use
+```java
+private SegmentIO segmentIO;
+
+public void someMethod() {
+    segmentIO.track(() -> Mono.just(TrackMessage.builder("event-name")
+            .userId("userId")
+            .anonymousId("anonymousId")
+            .sentAt(new Date())));
+}
+```
+
+## Dependency
+[![JDK 17-21](https://img.shields.io/badge/jdk-v17__21-blue)](https://javaalmanac.io/jdk/17/)

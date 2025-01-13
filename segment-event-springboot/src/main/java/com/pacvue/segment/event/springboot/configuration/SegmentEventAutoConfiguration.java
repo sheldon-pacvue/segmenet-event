@@ -7,7 +7,6 @@ import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientAnalyticsProperties;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.Log;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -30,17 +29,18 @@ public class SegmentEventAutoConfiguration {
     @ConditionalOnMissingBean
     public Analytics segmentAnalytics(SegmentEventClientAnalyticsProperties properties) {
         Logger log = LoggerFactory.getLogger(Analytics.class);
-        return Analytics.builder(properties.getSecret()).log(new Log() {
-            @Override
-            public void print(Level level, String format, Object... args) {
-                log.debug(String.format(format, args));
-            }
+        return Analytics.builder(properties.getSecret())
+                .log(new Log() {
+                    @Override
+                    public void print(Level level, String format, Object... args) {
+                        log.debug(String.format(format, args));
+                    }
 
-            @Override
-            public void print(Level level, Throwable error, String format, Object... args) {
-                log.error(String.format(format, args), error);
-            }
-        }).build();
+                    @Override
+                    public void print(Level level, Throwable error, String format, Object... args) {
+                        log.error(String.format(format, args), error);
+                    }
+                }).build();
     }
 
     @Bean
