@@ -52,6 +52,6 @@ public class SegmentEventAutoConfiguration {
     public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .build().start();
+                .build();
     }
 }

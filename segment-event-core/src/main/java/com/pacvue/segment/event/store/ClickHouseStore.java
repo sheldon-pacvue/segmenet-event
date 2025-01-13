@@ -5,10 +5,10 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.segment.analytics.messages.Message;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 import java.sql.*;
@@ -22,32 +22,26 @@ import javax.sql.*;
 import static com.pacvue.segment.event.entity.SegmentPersistingMessage.LOG_OPERATION_SEND_TO_SEGMENT;
 
 
-@Data
-@RequiredArgsConstructor
-@Accessors(chain = true)
+@Builder
 @Slf4j
-public class ClickHouseStore implements Store<SegmentPersistingMessage> {
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
+    @Builder.Default
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
     private final String tableName;
     private final long loopIntervalMinutes;
     private MasterElection masterElection;
-    private boolean subscribing = false;
 
-
+    @NotNull
     @Override
-    public Mono<Boolean> publish(SegmentPersistingMessage event) {
-        try {
-            return Mono.defer(() -> {
-                try {
-                    return Mono.just(insertData(event));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        } catch (Exception e) {
-            return Mono.error(e);
-        }
+    public Mono<Boolean> commit(@NotNull SegmentPersistingMessage event) {
+        return Mono.defer(() -> {
+            try {
+                return Mono.just(insertData(event));
+            } catch (Exception ex) {
+                return Mono.error(ex);
+            }
+        });
     }
 
 
@@ -56,45 +50,52 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
      * 注意分布式问题，如果未实现master竞争机制，则无法使用该方法，使用zookeeper，redis等其他分布式系统进行竞争master
      * 需要循环进行查询，直到查询不到数据,睡眠5分钟，然后重试
      */
+    @NotNull
     @Override
-    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
-        if (subscribing) {
-            return;
-        }
-        this.subscribing = true;
-        loopGetData(consumer);
-    }
-
-    @Override
-    public void stopScribe() {
-        this.subscribing = false;
+    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
+        this.accepted = loopGetData(consumer);
+        return () -> this.accepted.dispose();
     }
 
     @Override
     public void shutdown() {
-        this.subscribing = false;
+        if (null == this.scheduler || this.scheduler.isShutdown()) {
+            return;
+        }
+        this.accepted.dispose();
+        this.accepted = null;
     }
 
-    private void loopGetData(Consumer<List<Message>> consumer) {
-        executor.schedule(() -> {
-            try {
-                if (null == masterElection || !masterElection.isMaster()) {
-                    return;
-                }
-                List<Message> events = queryData();
-                log.info("form db data size: {}", events.size());
-                if (events.isEmpty()) {
-                    return;
-                }
-                consumer.accept(events);
-            } catch (Exception ex) {
-                log.warn("resend segment event meet some error", ex);
-            } finally {
-                if (subscribing) {
+    @Override
+    public boolean isAccepted() {
+        return this.accepted != null;
+    }
+
+
+    private Disposable loopGetData(@NotNull Consumer<List<Message>> consumer) {
+        if (!scheduler.isShutdown()) {
+            scheduler.schedule(() -> {
+                try {
+                    if (!masterElection.isMaster()) {
+                        return;
+                    }
+                    List<Message> events = queryData();
+                    log.info("form db data size: {}", events.size());
+                    if (events.isEmpty()) {
+                        return;
+                    }
+                    consumer.accept(events);
+                } catch (Exception ex) {
+                    log.warn("resend segment event meet some error", ex);
+                } finally {
                     loopGetData(consumer);
                 }
-            }
-        }, loopIntervalMinutes, TimeUnit.MINUTES);
+            }, loopIntervalMinutes, TimeUnit.MINUTES);
+        }
+        return () -> {
+            scheduler.shutdownNow();
+            scheduler = Executors.newScheduledThreadPool(1);
+        };
     }
 
     /**
@@ -102,7 +103,7 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
      * 因为这个sql仅会判断本地表是否存在，即使存在仍然会创建zookeeper节点
      * 但是由于节点已经存在，则会报错，所以分开先判断表是否存在
      */
-    public void createTableIfNotExists() {
+    public ClickHouseStore createTableIfNotExists() {
         String checkTableSQL = "EXISTS TABLE " + tableName;
         String createTableSQL = """
                CREATE TABLE %s (
@@ -125,13 +126,14 @@ public class ClickHouseStore implements Store<SegmentPersistingMessage> {
         try (Statement statement = dataSource.getConnection().createStatement()) {
             ResultSet resultSet = statement.executeQuery(checkTableSQL);
             if (resultSet.next() && resultSet.getBoolean(1)) {
-                return;
+                return this;
             }
             statement.execute(createTableSQL);
             log.debug("create table success, tableName: {}", tableName);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+        return this;
     }
 
     private boolean insertData(SegmentPersistingMessage event) {

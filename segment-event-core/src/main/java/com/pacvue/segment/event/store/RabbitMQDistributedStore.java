@@ -5,9 +5,9 @@ import com.google.gson.reflect.TypeToken;
 import com.rabbitmq.client.*;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
-import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -19,9 +19,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 @Slf4j
-@Data
 @Builder
-public class RabbitMQDistributedStore implements Store<Message> {
+public class RabbitMQDistributedStore extends AbstractStore<Message> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -33,7 +32,9 @@ public class RabbitMQDistributedStore implements Store<Message> {
 
 
     // 发布消息
-    public Mono<Boolean> publish(Message event) {
+    @NotNull
+    @Override
+    public Mono<Boolean> commit(@NotNull Message event) {
         return Mono.fromCallable(() -> {
             try {
                 // 创建消息属性
@@ -52,8 +53,9 @@ public class RabbitMQDistributedStore implements Store<Message> {
     }
 
     // 订阅消息
+    @NotNull
     @Override
-    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
+    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
         try {
             this.consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @SneakyThrows
@@ -70,20 +72,12 @@ public class RabbitMQDistributedStore implements Store<Message> {
                     consumer.accept(eventList);
                 }
             });
+            return () -> {
+                channel.basicCancel(consumerTag);
+                consumerTag = null;
+            };
         } catch (IOException e) {
             throw new RuntimeException("Subscribing failed", e);
-        }
-    }
-
-    @Override
-    public void stopScribe() {
-        // 停止消费（解除订阅）
-        // 这里的 consumerTag 是上面 basicConsume 方法返回的标签
-        try {
-            channel.basicCancel(consumerTag);  // 取消消费者，解除订阅
-            consumerTag = null;
-        } catch (IOException e) {
-            log.error("stopScribe failed", e);
         }
     }
 
@@ -98,5 +92,10 @@ public class RabbitMQDistributedStore implements Store<Message> {
             }
         } catch (IOException | TimeoutException ignore) {
         }
+    }
+
+    @Override
+    public boolean isAccepted() {
+        return this.consumerTag != null;
     }
 }

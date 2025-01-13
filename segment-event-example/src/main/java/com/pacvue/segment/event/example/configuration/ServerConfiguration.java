@@ -66,10 +66,13 @@ public class ServerConfiguration {
     public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) throws IOException {
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.configFromPropeties(properties.getDataSourceProperties());
-        ClickHouseStore clickHouseStore = new ClickHouseStore(dataSource, properties.getTableName(), properties.getLoopIntervalMinutes())
-                .setMasterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"));
-        clickHouseStore.createTableIfNotExists();
-        return clickHouseStore;
+        return ClickHouseStore.builder()
+                .dataSource(dataSource)
+                .tableName(properties.getTableName())
+                .loopIntervalMinutes(properties.getLoopIntervalMinutes())
+                .masterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"))
+                .build()
+                .createTableIfNotExists();
     }
 
 
@@ -99,6 +102,6 @@ public class ServerConfiguration {
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
                 .persistingStore(persistingStore)
-                .build().start();
+                .build();
     }
 }

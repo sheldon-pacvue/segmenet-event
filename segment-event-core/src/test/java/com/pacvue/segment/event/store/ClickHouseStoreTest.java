@@ -9,8 +9,6 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @Slf4j
 class ClickHouseStoreTest {
     private static ClickHouseStore store;
@@ -27,16 +25,20 @@ class ClickHouseStoreTest {
         properties.setProperty("druid.testWhileIdle", "true");
 
         dataSource.configFromPropeties(properties);
-        store = new ClickHouseStore(dataSource, "SegmentEventLog", 1);
-        store.setMasterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"));
-        store.createTableIfNotExists();
+        ClickHouseStore.builder()
+                .dataSource(dataSource)
+                .tableName("SegmentEventLog")
+                .loopIntervalMinutes(1)
+                .masterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"))
+                .build()
+                .createTableIfNotExists();
     }
 
     @Test
     void subscribe() throws InterruptedException {
-        store.subscribe(events -> {
+        store.accept(events -> {
             log.info("events={}", events);
-        }, 5);
+        });
         TimeUnit.MINUTES.sleep(10);
     }
 }

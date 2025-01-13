@@ -2,18 +2,32 @@ package com.pacvue.segment.event.store;
 
 import com.pacvue.segment.event.gson.Gson;
 import com.segment.analytics.messages.Message;
+import lombok.NonNull;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 public interface Store<T extends Message> extends Gson {
-    // 默认方法，如果没有传入 optional，可以使用默认值
-    Mono<Boolean> publish(T event);
+    /**
+     * 存入数据
+     */
+    @NonNull
+    Mono<Boolean> commit(@NonNull T event);
 
-    void subscribe(Consumer<List<Message>> consumer, int bundleCount);
+    /**
+     * 取出数据
+     */
+    @NonNull
+    StopAccept accept(@NonNull Consumer<List<Message>> consumer);
 
-    void stopScribe();
-
+    /**
+     * 优雅关机
+     */
     void shutdown();
+
+    /**
+     * 是否已经监听的某个accept消费者
+     */
+    boolean isAccepted();
 }

@@ -21,8 +21,6 @@ import java.util.Optional;
 @Slf4j
 @Builder
 public final class SegmentIO  {
-    @Builder.Default
-    private boolean enabled = false;
     private final SegmentEventReporter reporter;
     /**
      * 非必须： 分布式缓冲，用于流量整形，降低峰值负载
@@ -37,8 +35,7 @@ public final class SegmentIO  {
      */
     @Builder.Default
     @NonNull
-    private final Store<Message> bufferStore = new ReactorLocalStore(10);
-    private final int bundleCount = 5;
+    private final Store<Message> bufferStore = ReactorLocalStore.builder().bufferSize(5).bufferTimeoutSeconds(10).build();
     @Builder.Default
     @NonNull
     private final List<MessageTransformer> messageTransformers = new ArrayList<>();
@@ -49,30 +46,26 @@ public final class SegmentIO  {
     /**
      * 开始接受事件，并且开始上报
      */
-    public SegmentIO start() {
-        Optional.ofNullable(distributedStore).ifPresent(store -> store.subscribe(list -> list.forEach(bufferStore::publish), bundleCount));
-        bufferStore.subscribe(this::handleReporter, bundleCount);
-        this.enabled = true;
-        return this;
+    public void start() {
+        // 分布式仓库中的数据取出后，存入本地buffer仓库，用于批量上报
+        Optional.ofNullable(distributedStore).ifPresent(store -> store.accept(list -> list.forEach(bufferStore::commit)));
+        // 从持久化仓库中获取未发送的数据进行补发
+        Optional.ofNullable(persistingStore).ifPresent(store -> store.accept(list -> list.forEach(bufferStore::commit)));
+        // 本地buffer仓库的数据超出阈值后，进行上报
+        bufferStore.accept(this::handleReport);
     }
 
-    /**
-     * 仍然接收事件，但是暂停上报
-     */
-    public SegmentIO pause() {
-        Optional.ofNullable(distributedStore).ifPresent(Store::stopScribe);
-        bufferStore.stopScribe();
-        return this;
-    }
 
     /**
-     * 不再接收事件，将未处理完的事件立即上报
+     * 优雅关机
      */
-    public SegmentIO shutdown() {
-        this.enabled = false;
+    public void shutdown() {
+        // 关闭分布式新事件
         Optional.ofNullable(distributedStore).ifPresent(Store::shutdown);
+        // 关闭数据库拉取事件
+        Optional.ofNullable(persistingStore).ifPresent(Store::shutdown);
+        // 本地buffer仓库事件清理
         bufferStore.shutdown();
-        return this;
     }
 
     /**
@@ -80,20 +73,12 @@ public final class SegmentIO  {
      */
     public boolean startResend() {
         if (null != persistingStore) {
-            persistingStore.subscribe(list -> list.forEach(bufferStore::publish), bundleCount);
+            persistingStore.accept(list -> list.forEach(bufferStore::commit));
             return true;
         }
         return false;
     }
 
-    /**
-     * 停止从数据库拉取失败事件上报
-     */
-    public void stopResend() {
-        if (null != persistingStore) {
-            persistingStore.stopScribe();
-        }
-    }
 
     public void track(SegmentEventGenerator<TrackMessage, TrackMessage.Builder> generator) {
         deliver(generator);
@@ -120,16 +105,13 @@ public final class SegmentIO  {
     }
 
     public <T extends Message, V extends MessageBuilder<T, V>> Mono<Boolean> deliverReact(SegmentEventGenerator<T, V> generator) {
-        if (!enabled) {
-            return Mono.just(Boolean.FALSE);
-        }
         return generator.generate()
                 .mapNotNull(this::buildMessage)
                 .flatMap(event -> {
                     // 尝试分布式贮藏
-                    return Mono.defer(() -> distributedStore.publish(event))
+                    return Mono.defer(() -> distributedStore.commit(event))
                             // 如果分布式存储失败，尝试本地缓冲后直接上报
-                            .onErrorResume(ex -> bufferStore.publish(event));
+                            .onErrorResume(ex -> bufferStore.commit(event));
                 })
                 .onErrorResume(ex -> {
                     log.error("deliver failed", ex);
@@ -139,7 +121,7 @@ public final class SegmentIO  {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private void handleReporter(List<Message> events) {
+    private void handleReport(List<Message> events) {
         reporter.reportDefault(events)
                 // 如果上报成功将记录成功
                 .doOnSuccess(b -> {
@@ -153,7 +135,7 @@ public final class SegmentIO  {
                 .onErrorResume(throwable -> {
                     log.warn("batch report failed, switching to single event processing. Error: {}", throwable.getMessage(), throwable);
                     return Flux.fromIterable(events)
-                            .flatMap(event -> distributedStore.publish(event).onErrorResume(ex -> tryPersist(event, false)))
+                            .flatMap(event -> distributedStore.commit(event).onErrorResume(ex -> tryPersist(event, false)))
                             .all(result -> result) // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
                             .flatMap(Mono::just);
                 })
@@ -163,7 +145,7 @@ public final class SegmentIO  {
     }
 
     private Mono<Boolean> tryPersist(Message event, boolean result) {
-        return Mono.defer(() -> persistingStore.publish(SegmentPersistingMessage.builder().message(event).result(result).build()))
+        return Mono.defer(() -> persistingStore.commit(SegmentPersistingMessage.builder().message(event).result(result).build()))
                 .onErrorResume(ex -> {
                     log.warn("persist failed, event: {}", event, ex);
                     return Mono.just(Boolean.FALSE);

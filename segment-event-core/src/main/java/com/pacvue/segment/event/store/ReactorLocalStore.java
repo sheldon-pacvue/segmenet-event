@@ -1,8 +1,9 @@
 package com.pacvue.segment.event.store;
 
 import com.segment.analytics.messages.Message;
-import lombok.RequiredArgsConstructor;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -10,51 +11,53 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 
+@Builder
 @Slf4j
-@RequiredArgsConstructor
-public class ReactorLocalStore implements Store<Message> {
-    private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer(); // 外部持有 FluxSink 引用
-    private final int bufferTimeoutSeconds;
-    private boolean subscribing = false;
+public class ReactorLocalStore extends AbstractStore<Message> {
+    @Builder.Default
+    private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer();
+    @Builder.Default
+    private final int bufferSize = 5;
+    @Builder.Default
+    private final int bufferTimeoutSeconds = 10;
 
+    @NotNull
     @Override
-    public Mono<Boolean> publish(Message event) {
+    public Mono<Boolean> commit(@NotNull Message event) {
         Sinks.EmitResult emitResult = sink.tryEmitNext(event);
         if (emitResult.isFailure()) {
-            log.debug("event publish failed, event：{}, reason: {}", event, emitResult);
+            log.debug("event commit failed, event：{}, reason: {}", event, emitResult);
             throw new RuntimeException("publish failed. " + emitResult);
         }
-        log.debug("event publish success, event：{}", event);
+        log.debug("event commit success, event：{}", event);
         return Mono.just(emitResult.isSuccess());
     }
 
+    @NotNull
     @Override
-    public void subscribe(Consumer<List<Message>> consumer, int bundleCount) {
-        if (subscribing) { return; }
-        this.subscribing = true;
-        sink.asFlux().bufferTimeout(bundleCount, Duration.ofSeconds(bufferTimeoutSeconds))
-                .takeWhile(events -> this.subscribing).subscribe(events -> {
-            log.debug("event consume start, events：{}", events);
-            consumer.accept(events);
-        },
+    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
+        this.accepted = sink.asFlux().bufferTimeout(bufferSize, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
+                            log.debug("event consume start, events：{}", events);
+                            consumer.accept(events);
+                        },
                         error -> log.error("Error consuming events", error),
                         () -> log.debug("Event consumption complete."));
-    }
-
-    /**
-     * 1.将缓存快速释放，并且关闭publish
-     * 2.停止消费
-     * 3.重建缓存，让publish不会报错
-     */
-    @Override
-    public void stopScribe() {
-        sink.tryEmitComplete();
-        this.subscribing = false;
-        sink = Sinks.many().multicast().onBackpressureBuffer();  // 重建新的 sink 实例
+        return () -> {
+            sink.tryEmitComplete();
+            this.accepted.dispose();
+            this.accepted = null;
+            // 重建新的 sink 实例,避免commit报错
+            sink = Sinks.many().multicast().onBackpressureBuffer();
+        };
     }
 
     @Override
     public void shutdown() {
         sink.tryEmitComplete();
+    }
+
+    @Override
+    public boolean isAccepted() {
+        return this.accepted != null;
     }
 }
