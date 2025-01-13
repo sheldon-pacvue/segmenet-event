@@ -53,13 +53,14 @@ public final class SegmentIO  {
         Optional.ofNullable(persistingStore).ifPresent(store -> store.accept(list -> list.forEach(bufferStore::commit)));
         // 本地buffer仓库的数据超出阈值后，进行上报
         bufferStore.accept(this::handleReport);
+        log.info("SegmentIO start");
     }
 
 
     /**
-     * 优雅关机，如果是在springboot中，销毁spring容器前会自动调用
+     * 优雅关机，避免spring销毁时，重复调用shutdown方法，这里函数名字不要用close,destroy,shutdown
      */
-    public void shutdown() {
+    public void tryShutdown() {
         // 关闭分布式新事件
         Optional.ofNullable(distributedStore).ifPresent(Store::shutdown);
         // 关闭数据库拉取事件
