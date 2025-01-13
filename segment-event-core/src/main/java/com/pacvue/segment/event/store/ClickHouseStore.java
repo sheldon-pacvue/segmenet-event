@@ -84,12 +84,10 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
                     loopGetData(consumer);
                 }
             }, loopIntervalMinutes, TimeUnit.MINUTES);
-            isAccepted = true;
         }
         return () -> {
             scheduler.shutdownNow();
             scheduler = Executors.newScheduledThreadPool(1);
-            isAccepted = false;
         };
     }
 

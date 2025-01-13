@@ -10,7 +10,7 @@ import static com.pacvue.segment.event.springboot.properties.RabbitMQRemoteStore
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
 public class RabbitMQRemoteStoreProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.rabbit.store";
+    public final static String PROPERTIES_PREFIX = "segment.event.store.rabbit";
 
     private String uri;
     private String exchangeName;

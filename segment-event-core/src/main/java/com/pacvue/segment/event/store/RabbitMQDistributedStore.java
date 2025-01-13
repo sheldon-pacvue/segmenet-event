@@ -70,10 +70,8 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
                     consumer.accept(eventList);
                 }
             });
-            this.isAccepted = true;
             return () -> {
                 channel.basicCancel(consumerTag);
-                this.isAccepted = false;
             };
         } catch (IOException e) {
             throw new RuntimeException("Subscribing failed", e);

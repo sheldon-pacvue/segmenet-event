@@ -16,7 +16,12 @@ public abstract class AbstractStore<T extends Message> implements Store<T> {
         if (isAccepted) {
             throw new IllegalStateException("Already accepted a consumer.");
         }
-        return doAccept(consumer);
+        StopAccept stopAccept = doAccept(consumer);
+        this.isAccepted = true;
+        return () -> {
+            stopAccept.stop();
+            this.isAccepted = false;
+        };
     }
 
     /**

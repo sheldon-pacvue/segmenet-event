@@ -7,8 +7,8 @@ segment:
   analytics:
     writeKey: "qweqwe"
   event:
-    clickhouse:
-      store:
+    store:
+      clickhouse:
         data-source-properties:
           druid:
             driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
@@ -18,11 +18,7 @@ segment:
             validationQuery: SELECT 1
             testWhileIdle: true
         table-name: SegmentEventLog
-        enabled: true
-    ## ??rabbit?????????
-    rabbit:
-      store:
-        enabled: true
+      rabbit:
         uri: amqp://deploy:deploy@localhost:5672
         exchangeName: amq.direct
         routingKey: segment-event-example
@@ -39,7 +35,6 @@ segment:
         end-point: "/v1/import"
         host: "localhost"
         port: 9090
-        timeout: 10000
         secret: "123123"
 management:
   endpoints:

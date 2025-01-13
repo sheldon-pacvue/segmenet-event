@@ -12,9 +12,8 @@ import static com.pacvue.segment.event.springboot.properties.ClickHouseStoreProp
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
 public class ClickHouseStoreProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.clickhouse.store";
+    public final static String PROPERTIES_PREFIX = "segment.event.store.clickhouse";
 
-    private boolean enabled;
     private Properties dataSourceProperties;
     private String tableName = "SegmentEventsLog";
     private long loopIntervalMinutes = 1;

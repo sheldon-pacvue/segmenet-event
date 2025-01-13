@@ -43,11 +43,9 @@ public class ReactorLocalStore extends AbstractStore<Message> {
                         },
                         error -> log.error("Error consuming events", error),
                         () -> log.debug("Event consumption complete."));
-        this.isAccepted = true;
         return () -> {
             sink.tryEmitComplete();
             accepted.dispose();
-            this.isAccepted = false;
             // 重建新的 sink 实例,避免commit报错
             sink = Sinks.many().multicast().onBackpressureBuffer();
         };

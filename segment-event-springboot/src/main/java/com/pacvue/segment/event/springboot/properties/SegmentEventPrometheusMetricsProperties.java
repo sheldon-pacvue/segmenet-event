@@ -10,7 +10,7 @@ import static com.pacvue.segment.event.springboot.properties.SegmentEventPrometh
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
 public class SegmentEventPrometheusMetricsProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.prometheus.metrics";
+    public final static String PROPERTIES_PREFIX = "segment.event.metrics.prometheus";
 
     private String name = "helium10_segment_async_send_events_total";
     private String[] tags = new String[]{};
