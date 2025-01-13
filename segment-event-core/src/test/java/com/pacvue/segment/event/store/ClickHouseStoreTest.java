@@ -25,7 +25,7 @@ class ClickHouseStoreTest {
         properties.setProperty("druid.testWhileIdle", "true");
 
         dataSource.configFromPropeties(properties);
-        ClickHouseStore.builder()
+        store = ClickHouseStore.builder()
                 .dataSource(dataSource)
                 .tableName("SegmentEventLog")
                 .loopIntervalMinutes(1)
@@ -34,11 +34,13 @@ class ClickHouseStoreTest {
                 .createTableIfNotExists();
     }
 
+    /**
+     * 测试优雅关机功能
+     */
     @Test
-    void subscribe() throws InterruptedException {
-        store.accept(events -> {
-            log.info("events={}", events);
-        });
-        TimeUnit.MINUTES.sleep(10);
+    void shutdown() throws InterruptedException {
+        store.accept(events -> log.info("events={}", events));
+        store.shutdown();
+        TimeUnit.SECONDS.sleep(3);
     }
 }

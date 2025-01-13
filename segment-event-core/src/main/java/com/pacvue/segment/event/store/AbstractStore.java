@@ -3,18 +3,17 @@ package com.pacvue.segment.event.store;
 import com.segment.analytics.messages.Message;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
-import reactor.core.Disposable;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 public abstract class AbstractStore<T extends Message> implements Store<T> {
-    protected Disposable accepted;
+    protected boolean isAccepted = false;
 
     @NotNull
     @Override
     public final StopAccept accept(@NonNull Consumer<List<Message>> consumer) {
-        if (isAccepted()) {
+        if (isAccepted) {
             throw new IllegalStateException("Already accepted a consumer.");
         }
         return doAccept(consumer);

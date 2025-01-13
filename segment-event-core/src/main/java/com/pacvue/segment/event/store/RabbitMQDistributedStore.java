@@ -27,8 +27,6 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
 
     private final Connection connection;
     private final Channel channel;
-    private String consumerTag;
-
 
 
     // 发布消息
@@ -57,7 +55,7 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
     @Override
     protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
         try {
-            this.consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
+            String consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @SneakyThrows
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
@@ -72,9 +70,10 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
                     consumer.accept(eventList);
                 }
             });
+            this.isAccepted = true;
             return () -> {
                 channel.basicCancel(consumerTag);
-                consumerTag = null;
+                this.isAccepted = false;
             };
         } catch (IOException e) {
             throw new RuntimeException("Subscribing failed", e);
@@ -84,18 +83,13 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
     @Override
     public void shutdown() {
         try {
-            if (channel != null) {
+            if (channel != null && channel.isOpen()) {
                 channel.close();
             }
-            if (connection != null) {
+            if (connection != null && connection.isOpen()) {
                 connection.close();
             }
-        } catch (IOException | TimeoutException ignore) {
+        } catch (IOException | TimeoutException ignored) {
         }
-    }
-
-    @Override
-    public boolean isAccepted() {
-        return this.consumerTag != null;
     }
 }

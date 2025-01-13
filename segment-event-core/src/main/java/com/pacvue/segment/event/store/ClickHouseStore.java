@@ -53,26 +53,19 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
     @NotNull
     @Override
     protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
-        this.accepted = loopGetData(consumer);
-        return () -> this.accepted.dispose();
+        return loopGetData(consumer);
     }
 
     @Override
     public void shutdown() {
-        if (null == this.scheduler || this.scheduler.isShutdown()) {
+        if (null == this.scheduler || !this.scheduler.isShutdown()) {
             return;
         }
-        this.accepted.dispose();
-        this.accepted = null;
-    }
-
-    @Override
-    public boolean isAccepted() {
-        return this.accepted != null;
+        this.scheduler.shutdownNow();
     }
 
 
-    private Disposable loopGetData(@NotNull Consumer<List<Message>> consumer) {
+    private StopAccept loopGetData(@NotNull Consumer<List<Message>> consumer) {
         if (!scheduler.isShutdown()) {
             scheduler.schedule(() -> {
                 try {
@@ -91,10 +84,12 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
                     loopGetData(consumer);
                 }
             }, loopIntervalMinutes, TimeUnit.MINUTES);
+            isAccepted = true;
         }
         return () -> {
             scheduler.shutdownNow();
             scheduler = Executors.newScheduledThreadPool(1);
+            isAccepted = false;
         };
     }
 

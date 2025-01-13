@@ -57,7 +57,7 @@ public final class SegmentIO  {
 
 
     /**
-     * 优雅关机
+     * 优雅关机，如果是在springboot中，销毁spring容器前会自动调用
      */
     public void shutdown() {
         // 关闭分布式新事件
@@ -66,6 +66,7 @@ public final class SegmentIO  {
         Optional.ofNullable(persistingStore).ifPresent(Store::shutdown);
         // 本地buffer仓库事件清理
         bufferStore.shutdown();
+        log.info("SegmentIO shutdown");
     }
 
     /**

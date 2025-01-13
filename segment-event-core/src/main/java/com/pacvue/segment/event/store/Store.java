@@ -25,9 +25,4 @@ public interface Store<T extends Message> extends Gson {
      * 优雅关机
      */
     void shutdown();
-
-    /**
-     * 是否已经监听的某个accept消费者
-     */
-    boolean isAccepted();
 }

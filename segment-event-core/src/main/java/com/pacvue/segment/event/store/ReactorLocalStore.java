@@ -4,6 +4,7 @@ import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -36,16 +37,17 @@ public class ReactorLocalStore extends AbstractStore<Message> {
     @NotNull
     @Override
     protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
-        this.accepted = sink.asFlux().bufferTimeout(bufferSize, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
+        Disposable accepted = sink.asFlux().bufferTimeout(bufferSize, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
                             log.debug("event consume start, events：{}", events);
                             consumer.accept(events);
                         },
                         error -> log.error("Error consuming events", error),
                         () -> log.debug("Event consumption complete."));
+        this.isAccepted = true;
         return () -> {
             sink.tryEmitComplete();
-            this.accepted.dispose();
-            this.accepted = null;
+            accepted.dispose();
+            this.isAccepted = false;
             // 重建新的 sink 实例,避免commit报错
             sink = Sinks.many().multicast().onBackpressureBuffer();
         };
@@ -54,10 +56,5 @@ public class ReactorLocalStore extends AbstractStore<Message> {
     @Override
     public void shutdown() {
         sink.tryEmitComplete();
-    }
-
-    @Override
-    public boolean isAccepted() {
-        return this.accepted != null;
     }
 }
