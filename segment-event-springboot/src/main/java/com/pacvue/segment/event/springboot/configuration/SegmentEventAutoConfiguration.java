@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 
@@ -74,6 +75,7 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix = PersistingStoreProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
     @ConditionalOnMissingBean
     public RabbitMQDistributedStore<SegmentPersistingMessage> persistingStore(PersistingStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         RabbitMQRemoteStoreProperties config = properties.getConfig();
@@ -98,10 +100,10 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<SegmentPersistingMessage> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Optional<Store<SegmentPersistingMessage>> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .persistingStore(persistingStore)
+                .persistingStore(persistingStore.orElse(null))
                 .build();
     }
 }

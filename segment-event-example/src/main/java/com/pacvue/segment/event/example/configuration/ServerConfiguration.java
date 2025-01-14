@@ -32,6 +32,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -135,11 +136,11 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Store<SegmentPersistingMessage> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentPersistingMessage>> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
-                .persistingStore(persistingStore)
+                .persistingStore(persistingStore.orElse(null))
                 .build();
     }
 }
