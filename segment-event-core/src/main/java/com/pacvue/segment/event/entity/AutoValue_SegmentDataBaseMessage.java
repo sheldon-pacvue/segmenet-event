@@ -11,11 +11,13 @@ final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
     private final Message message;
     private final boolean result;
     private final int operation;
+    private final String secret;
 
-    AutoValue_SegmentDataBaseMessage(Message message, boolean result, int operation) {
+    AutoValue_SegmentDataBaseMessage(Message message, boolean result, int operation, String secret) {
         this.message = message;
         this.result = result;
         this.operation = operation;
+        this.secret = secret;
     }
 
     @Override
@@ -71,5 +73,10 @@ final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
     @Override
     public Map<String, Object> integrations() {
         return message.integrations();
+    }
+
+    @Override
+    public String secret() {
+        return secret;
     }
 }

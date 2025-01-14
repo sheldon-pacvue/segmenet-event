@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Builder
-public class RabbitMQDistributedStore extends AbstractStore<Message> {
+public class RabbitMQDistributedStore<T extends Message> extends AbstractStore<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
@@ -32,7 +32,7 @@ public class RabbitMQDistributedStore extends AbstractStore<Message> {
     // 发布消息
     @NotNull
     @Override
-    public Mono<Boolean> commit(@NotNull Message event) {
+    public Mono<Boolean> commit(@NotNull T event) {
         return Mono.fromCallable(() -> {
             try {
                 // 创建消息属性

@@ -4,7 +4,17 @@ import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
+import com.pacvue.segment.event.entity.SegmentPersistingMessage;
+import com.pacvue.segment.event.springboot.properties.DistributedStoreProperties;
+import com.pacvue.segment.event.springboot.properties.PersistingStoreProperties;
+import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientAnalyticsProperties;
+import com.pacvue.segment.event.store.RabbitMQDistributedStore;
+import com.pacvue.segment.event.store.Store;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.Log;
 import org.slf4j.Logger;
@@ -13,9 +23,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeoutException;
 
 
 @Configuration
@@ -58,9 +75,33 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter) {
+    public RabbitMQDistributedStore<SegmentPersistingMessage> persistingStore(PersistingStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+        RabbitMQRemoteStoreProperties config = properties.getConfig();
+
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setUri(config.getUri());
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+
+        channel.exchangeDeclare(config.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
+        channel.queueDeclare(config.getQueueName(), true, false, false, null);
+        channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
+
+        return RabbitMQDistributedStore.<SegmentPersistingMessage>builder()
+                .connection(connection)
+                .channel(channel)
+                .exchangeName(config.getExchangeName())
+                .routingKey(config.getRoutingKey())
+                .queueName(config.getQueueName())
+                .build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<SegmentPersistingMessage> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
+                .persistingStore(persistingStore)
                 .build();
     }
 }

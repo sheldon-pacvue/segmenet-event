@@ -54,11 +54,6 @@ public final class SegmentIO  {
             store.accept(list -> list.forEach(bufferStore::commit));
             log.info("SegmentIO distributedStore started");
         });
-        // 从持久化仓库中获取未发送的数据进行补发
-        Optional.ofNullable(persistingStore).ifPresent(store -> {
-            store.accept(list -> list.forEach(bufferStore::commit));
-            log.info("SegmentIO persistingStore started");
-        });
         // 本地buffer仓库的数据超出阈值后，进行上报
         bufferStore.accept(this::handleReport);
         log.info("SegmentIO bufferStore started");

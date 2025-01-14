@@ -17,6 +17,7 @@ public abstract class SegmentPersistingMessage implements Message {
 
     public abstract int operation();
 
+    public abstract String secret();
 
     public static Builder builder() {
         return new AutoValue_SegmentDataBaseMessage.Builder();
@@ -30,6 +31,7 @@ public abstract class SegmentPersistingMessage implements Message {
     public static class Builder {
         private Message message;
         private boolean result;
+        private String secret;
         private int operation = LOG_OPERATION_SEND_TO_SEGMENT;
 
         public Builder message(Message message) {
@@ -47,8 +49,13 @@ public abstract class SegmentPersistingMessage implements Message {
             return this;
         }
 
+        public Builder secret(String secret) {
+            this.secret = secret;
+            return this;
+        }
+
         public SegmentPersistingMessage build() {
-            return new AutoValue_SegmentDataBaseMessage(message, result, operation);
+            return new AutoValue_SegmentDataBaseMessage(message, result, operation, secret);
         }
     }
 }

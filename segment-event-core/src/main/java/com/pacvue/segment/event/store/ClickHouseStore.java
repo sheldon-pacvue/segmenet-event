@@ -23,7 +23,7 @@ import static com.pacvue.segment.event.entity.SegmentPersistingMessage.LOG_OPERA
 
 @Builder
 @Slf4j
-public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
+public class ClickHouseStore<T extends SegmentPersistingMessage> extends AbstractStore<T> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
@@ -33,7 +33,7 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
 
     @NotNull
     @Override
-    public Mono<Boolean> commit(@NotNull SegmentPersistingMessage event) {
+    public Mono<Boolean> commit(@NotNull T event) {
         return Mono.defer(() -> {
             try {
                 return Mono.just(insertData(event));
@@ -95,7 +95,7 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
      * 因为这个sql仅会判断本地表是否存在，即使存在仍然会创建zookeeper节点
      * 但是由于节点已经存在，则会报错，所以分开先判断表是否存在
      */
-    public ClickHouseStore createTableIfNotExists() {
+    public ClickHouseStore<T> createTableIfNotExists() {
         String checkTableSQL = "EXISTS TABLE " + tableName;
         String createTableSQL = """
                CREATE TABLE %s (
@@ -107,13 +107,14 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
                    `result` UInt8,
                    `operation` UInt8,
                    `createdAt` Int32,
-                   `eventTime` Int32
+                   `eventTime` Int32,
+                   `secret` String
                )
-               ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/SegmentEventsLog', '{replica}')
+               ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/%s', '{replica}')
                PARTITION BY toYYYYMM(eventDate)
                ORDER BY (userId, eventDate, type, result)
                SETTINGS index_granularity = 8192;
-               """.formatted(tableName);
+               """.formatted(tableName, tableName);
 
         try (Statement statement = dataSource.getConnection().createStatement()) {
             ResultSet resultSet = statement.executeQuery(checkTableSQL);
@@ -128,11 +129,11 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
         return this;
     }
 
-    private boolean insertData(SegmentPersistingMessage event) {
+    private boolean insertData(T event) {
         // 插入的SQL语句
         String insertSQL = """
-            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime, secret)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.formatted(tableName);  // 用表名替换占位符
 
         try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
@@ -147,6 +148,7 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
             preparedStatement.setInt(7, event.operation());  // operation
             preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
             preparedStatement.setLong(9, Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toTimestamp).map(Timestamp::getTime).orElse(0L));  // eventTime
+            preparedStatement.setString(10, event.secret());
 
             boolean result = preparedStatement.execute();
             log.debug("Data inserted successfully!, result: {}", result);
@@ -159,7 +161,7 @@ public class ClickHouseStore extends AbstractStore<SegmentPersistingMessage> {
     private List<Message> queryData() throws Exception {
         String querySQL = """
                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
-                        MAX(message) as message, MIN(eventTime) as eventTime
+                        MAX(message) as message, MIN(eventTime) as eventTime, MAX(secret) as secret
                 FROM %s
                 WHERE eventDate >= toDate(now() - INTERVAL 2 DAY)
                 AND operation = %d

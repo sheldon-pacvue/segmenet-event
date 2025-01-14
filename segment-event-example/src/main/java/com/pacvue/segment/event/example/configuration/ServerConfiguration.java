@@ -1,6 +1,5 @@
 package com.pacvue.segment.event.example.configuration;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.*;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
@@ -8,12 +7,10 @@ import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
-import com.pacvue.segment.event.springboot.configuration.SegmentEventAutoConfiguration;
 import com.pacvue.segment.event.springboot.properties.*;
-import com.pacvue.segment.event.store.ClickHouseStore;
+import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
-import com.pacvue.segment.event.store.ZookeeperMasterElection;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -25,8 +22,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.netty.http.client.HttpClient;
@@ -116,37 +111,26 @@ public class ServerConfiguration {
                 .build();
     }
 
-    @Bean
-    public Store<SegmentPersistingMessage> persistingStore(ClickHouseStoreProperties properties) throws IOException {
-        DruidDataSource dataSource = new DruidDataSource();
-        dataSource.configFromPropeties(properties.getDataSourceProperties());
-        return ClickHouseStore.builder()
-                .dataSource(dataSource)
-                .tableName(properties.getTableName())
-                .loopIntervalMinutes(properties.getLoopIntervalMinutes())
-                .masterElection(new ZookeeperMasterElection("localhost:12181", "/segment/example"))
-                .build()
-                .createTableIfNotExists();
-    }
-
 
     @Bean
-    public Store<Message> distributedStore(RabbitMQRemoteStoreProperties properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    public Store<Message> distributedStore(DistributedStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+        RabbitMQRemoteStoreProperties config = properties.getConfig();
+
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setUri(properties.getUri());
+        factory.setUri(config.getUri());
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
-        channel.exchangeDeclare(properties.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
-        channel.queueDeclare(properties.getQueueName(), true, false, false, null);
-        channel.queueBind(properties.getQueueName(), properties.getExchangeName(), properties.getRoutingKey());
+        channel.exchangeDeclare(config.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
+        channel.queueDeclare(config.getQueueName(), true, false, false, null);
+        channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
 
         return RabbitMQDistributedStore.builder()
                 .connection(connection)
                 .channel(channel)
-                .exchangeName(properties.getExchangeName())
-                .routingKey(properties.getRoutingKey())
-                .queueName(properties.getQueueName())
+                .exchangeName(config.getExchangeName())
+                .routingKey(config.getRoutingKey())
+                .queueName(config.getQueueName())
                 .build();
     }
 

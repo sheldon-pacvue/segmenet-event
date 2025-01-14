@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 @Builder
 @Slf4j
-public class ReactorLocalStore extends AbstractStore<Message> {
+public class ReactorLocalStore<T extends Message> extends AbstractStore<T> {
     @Builder.Default
     private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer();
     @Builder.Default
@@ -24,7 +24,7 @@ public class ReactorLocalStore extends AbstractStore<Message> {
 
     @NotNull
     @Override
-    public Mono<Boolean> commit(@NotNull Message event) {
+    public Mono<Boolean> commit(@NotNull T event) {
         Sinks.EmitResult emitResult = sink.tryEmitNext(event);
         if (emitResult.isFailure()) {
             log.debug("event commit failed, event：{}, reason: {}", event, emitResult);

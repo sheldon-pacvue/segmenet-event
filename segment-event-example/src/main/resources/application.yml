@@ -6,21 +6,31 @@ spring:
 segment:
   event:
     store:
-      clickhouse:
-        data-source-properties:
-          druid:
-            driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
-            url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
-            username: default
-            password: default
-            validationQuery: SELECT 1
-            testWhileIdle: true
-        table-name: SegmentEventLog
-      rabbit:
-        uri: amqp://deploy:deploy@localhost:5672
-        exchangeName: amq.direct
-        routingKey: segment-event-example
-        queueName: segment-event-example
+      distributed:
+        clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties
+        properties:
+          uri: amqp://deploy:deploy@localhost:5672
+          exchangeName: amq.direct
+          routingKey: segment-event-example
+          queueName: segment-event-example
+      persisting:
+        clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties
+        properties:
+          uri: amqp://deploy:deploy@localhost:5672
+          exchangeName: amq.direct
+          routingKey: segment-event-example2
+          queueName: segment-event-example2
+#      persisting:
+#        data-source-properties:
+#          druid:
+#            driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+#            url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
+#            username: default
+#            password: default
+#            validationQuery: SELECT 1
+#            testWhileIdle: true
+#        table-name: SegmentEventLog
+
     client:
       http:
         secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
