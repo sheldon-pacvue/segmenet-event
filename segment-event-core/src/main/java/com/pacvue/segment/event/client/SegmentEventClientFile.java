@@ -2,11 +2,8 @@ package com.pacvue.segment.event.client;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
-import com.segment.analytics.Analytics;
 import com.segment.analytics.messages.Message;
-import lombok.Builder;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
