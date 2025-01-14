@@ -72,13 +72,13 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
                         return;
                     }
                     List<Message> events = queryData();
-                    log.info("form db data size: {}", events.size());
+                    log.info("[{}] form db data size: {}", instanceId, events.size());
                     if (events.isEmpty()) {
                         return;
                     }
                     consumer.accept(events);
                 } catch (Exception ex) {
-                    log.warn("resend segment event meet some error", ex);
+                    log.warn("[{}] resend segment event meet some error", instanceId, ex);
                 } finally {
                     loopGetData(consumer);
                 }
@@ -122,7 +122,7 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
                 return this;
             }
             statement.execute(createTableSQL);
-            log.debug("create table success, tableName: {}", tableName);
+            log.debug("[{}] create table success, tableName: {}", instanceId, tableName);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -151,7 +151,7 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
             preparedStatement.setString(10, event.secret());
 
             boolean result = preparedStatement.execute();
-            log.debug("Data inserted successfully!, result: {}", result);
+            log.debug("[{}] data inserted successfully!, result: {}", instanceId, result);
             return result;
         } catch (Exception ex) {
             throw new RuntimeException(ex);

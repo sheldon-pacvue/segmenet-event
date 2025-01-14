@@ -36,7 +36,7 @@ public final class SegmentIO  {
      */
     @Builder.Default
     @NonNull
-    private final Store<Message> bufferStore = ReactorLocalStore.builder().bufferSize(5).bufferTimeoutSeconds(10).build();
+    private final Store<Message> bufferStore = ReactorLocalStore.builder().bufferSize(5).bufferTimeoutSeconds(10).build().setInstanceId("bufferStore");
     @Builder.Default
     @NonNull
     private final List<MessageTransformer> messageTransformers = new ArrayList<>();

@@ -2,12 +2,18 @@ package com.pacvue.segment.event.store;
 
 import com.segment.analytics.messages.Message;
 import lombok.NonNull;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
+@Accessors(chain = true)
 public abstract class AbstractStore<T extends Message> implements Store<T> {
+    @Setter
+    protected String instanceId = UUID.randomUUID().toString();
     protected boolean isAccepted = false;
 
     @NotNull

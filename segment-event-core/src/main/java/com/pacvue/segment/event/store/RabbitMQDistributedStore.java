@@ -41,10 +41,10 @@ public class RabbitMQDistributedStore<T extends Message> extends AbstractStore<T
                         .headers(Map.of("type", event.getClass().getName())) // 设置类型信息
                         .build();
                 channel.basicPublish(exchangeName, routingKey, props, gson.toJson(event).getBytes(StandardCharsets.UTF_8));
-                log.debug("event publish success, event：{}", event);
+                log.debug("[{}] event publish success, event：{}", instanceId, event);
                 return Boolean.TRUE;
             } catch (IOException e) {
-                log.debug("event publish failed, event：{}", event);
+                log.debug("[{}] event publish failed, event：{}", instanceId, event);
                 throw new RuntimeException("Publishing failed", e);
             }
         });  // 可以映射为自定义异常

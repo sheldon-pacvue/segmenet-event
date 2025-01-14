@@ -4,10 +4,12 @@ import com.google.auto.value.AutoValue;
 import com.segment.analytics.gson.AutoGson;
 import com.segment.analytics.messages.*;
 
+import java.io.Serializable;
+
 
 @AutoValue
 @AutoGson
-public abstract class SegmentPersistingMessage implements Message {
+public abstract class SegmentPersistingMessage implements Message, Serializable {
     public final static int LOG_OPERATION_SEND_TO_SQS = 1;
     public final static int LOG_OPERATION_SEND_TO_SEGMENT = 2;
 

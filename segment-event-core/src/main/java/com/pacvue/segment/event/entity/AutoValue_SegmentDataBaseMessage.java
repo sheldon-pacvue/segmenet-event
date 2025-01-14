@@ -2,11 +2,13 @@ package com.pacvue.segment.event.entity;
 
 
 import com.segment.analytics.messages.Message;
+import lombok.ToString;
 
 import java.util.Date;
 import java.util.Map;
 
 
+@ToString
 final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
     private final Message message;
     private final boolean result;

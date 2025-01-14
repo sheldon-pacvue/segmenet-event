@@ -78,8 +78,8 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = PersistingStoreProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
-    @ConditionalOnMissingBean
-    public RabbitMQDistributedStore<SegmentPersistingMessage> persistingStore(PersistingStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    @ConditionalOnMissingBean(name = "persistingStore")
+    public Store<SegmentPersistingMessage> persistingStore(PersistingStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         RabbitMQRemoteStoreProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -97,7 +97,8 @@ public class SegmentEventAutoConfiguration {
                 .exchangeName(config.getExchangeName())
                 .routingKey(config.getRoutingKey())
                 .queueName(config.getQueueName())
-                .build();
+                .build()
+                .setInstanceId("persistingStore");
     }
 
     @Bean

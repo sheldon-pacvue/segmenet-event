@@ -132,7 +132,8 @@ public class ServerConfiguration {
                 .exchangeName(config.getExchangeName())
                 .routingKey(config.getRoutingKey())
                 .queueName(config.getQueueName())
-                .build();
+                .build()
+                .setInstanceId("distributedStore");
     }
 
     @Bean
