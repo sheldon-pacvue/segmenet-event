@@ -43,7 +43,7 @@ import java.util.concurrent.TimeoutException;
 })
 public class SegmentEventAutoConfiguration {
     @Bean
-    @ConditionalOnProperty(SegmentEventClientAnalyticsProperties.PROPERTIES_PREFIX + ".secret")
+    @ConditionalOnProperty(prefix = SegmentEventClientAnalyticsProperties.PROPERTIES_PREFIX, name = "secret")
     @ConditionalOnMissingBean
     public Analytics segmentAnalytics(SegmentEventClientAnalyticsProperties properties) {
         Logger log = LoggerFactory.getLogger(Analytics.class);
@@ -51,7 +51,9 @@ public class SegmentEventAutoConfiguration {
                 .log(new Log() {
                     @Override
                     public void print(Level level, String format, Object... args) {
-                        log.debug(String.format(format, args));
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format(format, args));
+                        }
                     }
 
                     @Override
