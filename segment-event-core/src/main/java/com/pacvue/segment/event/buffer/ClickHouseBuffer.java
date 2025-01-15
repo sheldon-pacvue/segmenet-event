@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
@@ -23,7 +23,7 @@ import static com.pacvue.segment.event.entity.SegmentLogMessage.LOG_OPERATION_SE
 
 @Builder
 @Slf4j
-public class ClickHouseStore<T extends SegmentLogMessage> extends AbstractStore<T> {
+public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffer<T> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
@@ -95,7 +95,7 @@ public class ClickHouseStore<T extends SegmentLogMessage> extends AbstractStore<
      * 因为这个sql仅会判断本地表是否存在，即使存在仍然会创建zookeeper节点
      * 但是由于节点已经存在，则会报错，所以分开先判断表是否存在
      */
-    public ClickHouseStore<T> createTableIfNotExists() {
+    public ClickHouseBuffer<T> createTableIfNotExists() {
         String checkTableSQL = "EXISTS TABLE " + tableName;
         String createTableSQL = """
                CREATE TABLE %s (

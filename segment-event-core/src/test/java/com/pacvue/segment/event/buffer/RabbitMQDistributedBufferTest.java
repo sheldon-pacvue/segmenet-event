@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
@@ -19,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class) // 按顺序执行测试方法
-class RabbitMQDistributedStoreTest {
-    private final static String URI = "amqp://deploy:deploy@localhost:5672";
+class RabbitMQDistributedBufferTest {
+    private final static String URI = "amqp://deploy:deploy@localhost:5678";
     private final static String EXCHANGE = "amq.direct";
     private final static String ROUTING_KEY = "segment-event-example";
     private final static String QUEUE_NAME = "segment-event-example";
-    private static RabbitMQDistributedStore<Message> store;
+    private static RabbitMQDistributedBuffer<Message> store;
 
     @BeforeAll
     static void setUp() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
@@ -37,7 +37,7 @@ class RabbitMQDistributedStoreTest {
         channel.queueDeclare(QUEUE_NAME, true, false, false, null);
         channel.queueBind(QUEUE_NAME, EXCHANGE, ROUTING_KEY);
 
-        store = RabbitMQDistributedStore.builder()
+        store = RabbitMQDistributedBuffer.builder()
                 .connection(connection)
                 .channel(channel)
                 .exchangeName(EXCHANGE)

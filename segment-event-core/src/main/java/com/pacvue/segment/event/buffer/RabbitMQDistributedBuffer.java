@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 
 import com.google.gson.reflect.TypeToken;
@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Builder
-public class RabbitMQDistributedStore<T extends Message> extends AbstractStore<T> {
+public class RabbitMQDistributedBuffer<T extends Message> extends AbstractBuffer<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;

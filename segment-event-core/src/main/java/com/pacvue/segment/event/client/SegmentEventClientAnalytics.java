@@ -4,6 +4,7 @@ import com.segment.analytics.Analytics;
 import com.segment.analytics.internal.AnalyticsClient;
 import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
@@ -21,12 +22,12 @@ public class SegmentEventClientAnalytics implements SegmentEventClient {
 
     @Override
     public Mono<Boolean> send(List<Message> events) {
-        return Mono.defer(() -> {
-            for (Message event : events) {
-                client.enqueue(event);
-            }
-            return Mono.just(true);
-        });
+        return Flux.fromIterable(events)
+                .flatMap(event -> {
+                    client.enqueue(event);
+                    return Mono.just(Boolean.TRUE);
+                })
+                .all(success -> success);
     }
 
     public static Builder builder() {

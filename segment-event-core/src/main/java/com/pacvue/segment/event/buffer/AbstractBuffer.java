@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import lombok.NonNull;
@@ -11,7 +11,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 @Accessors(chain = true)
-public abstract class AbstractStore<T extends Message> implements Store<T> {
+public abstract class AbstractBuffer<T extends Message> implements Buffer<T> {
     @Setter
     protected String instanceId = UUID.randomUUID().toString();
     protected boolean isAccepted = false;

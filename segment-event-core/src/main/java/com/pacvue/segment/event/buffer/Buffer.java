@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.pacvue.segment.event.gson.Gson;
 import com.segment.analytics.messages.Message;
@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.function.Consumer;
 
-public interface Store<T extends Message> extends Gson {
+public interface Buffer<T extends Message> extends Gson {
     /**
      * 存入数据
      */

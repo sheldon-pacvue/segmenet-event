@@ -50,7 +50,7 @@ public class SegmentEventClientHttp implements SegmentEventClient {
                     if (HttpResponseStatus.OK.equals(response.status())) {
                         return Mono.just(true); // 正常处理
                     } else {
-                        log.warn("segment event client http send failed, response: {}", response);
+                        log.warn("send failed, response: {}", response);
                         return Mono.error(new RuntimeException("HTTP Error: " + response.status())); // 抛出异常
                     }
                 })

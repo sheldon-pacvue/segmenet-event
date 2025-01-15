@@ -9,8 +9,8 @@ import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.springboot.properties.*;
 import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
-import com.pacvue.segment.event.store.RabbitMQDistributedStore;
-import com.pacvue.segment.event.store.Store;
+import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
+import com.pacvue.segment.event.buffer.Buffer;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -114,7 +114,7 @@ public class ServerConfiguration {
 
 
     @Bean
-    public Store<Message> distributedStore(DistributedStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    public Buffer<Message> distributedStore(DistributedStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         RabbitMQRemoteStoreProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -126,7 +126,7 @@ public class ServerConfiguration {
         channel.queueDeclare(config.getQueueName(), true, false, false, null);
         channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
 
-        return RabbitMQDistributedStore.builder()
+        return RabbitMQDistributedBuffer.builder()
                 .connection(connection)
                 .channel(channel)
                 .exchangeName(config.getExchangeName())
@@ -137,11 +137,11 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentLogMessage>> logStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientRabbit eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .distributedStore(distributedStore)
-                .logStore(logStore.orElse(null))
+                .distributedBuffer(distributedBuffer)
+                .eventLogger(eventLogger)
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
                 .build();

@@ -1,10 +1,11 @@
 package com.pacvue.segment.event.core;
 
+import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.metric.MetricsCounter;
-import com.pacvue.segment.event.store.ReactorLocalStore;
-import com.pacvue.segment.event.store.Store;
+import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
+import com.pacvue.segment.event.buffer.Buffer;
 import com.segment.analytics.MessageInterceptor;
 import com.segment.analytics.MessageTransformer;
 import com.segment.analytics.messages.*;
@@ -26,17 +27,18 @@ public final class SegmentIO  {
     /**
      * 非必须： 分布式缓冲，用于流量整形，降低峰值负载
      */
-    private final Store<Message> distributedStore;
+    private final Buffer<Message> distributedBuffer;
     /**
-     * 非必须： report到segment失败，或者记录发送
+     * 必须： report到segment失败，或者记录发送
      */
-    private final Store<SegmentLogMessage> logStore;
+    @NonNull
+    private final SegmentEventClient eventLogger;
     /**
      * 必须： 用于本地事件的缓冲，满足条件后批量进行上报
      */
     @Builder.Default
     @NonNull
-    private final Store<Message> bufferStore = ReactorLocalStore.builder().bufferSize(5).bufferTimeoutSeconds(10).build().setInstanceId("bufferStore");
+    private final Buffer<Message> localBuffer = ReactorLocalBuffer.builder().bufferSize(5).bufferTimeoutSeconds(10).build().setInstanceId("localBuffer");
     @Builder.Default
     @NonNull
     private final List<MessageTransformer> messageTransformers = new ArrayList<>();
@@ -54,12 +56,12 @@ public final class SegmentIO  {
     public void start() {
         // 分布式仓库中的数据取出后，存入本地buffer仓库，用于批量上报
         log.info("SegmentIO start");
-        Optional.ofNullable(distributedStore).ifPresent(store -> {
-            store.accept(list -> list.forEach(bufferStore::commit));
+        Optional.ofNullable(distributedBuffer).ifPresent(buffer -> {
+            buffer.accept(list -> list.forEach(localBuffer::commit));
             log.info("SegmentIO distributedStore started");
         });
         // 本地buffer仓库的数据超出阈值后，进行上报
-        bufferStore.accept(this::handleReport);
+        localBuffer.accept(this::handleReport);
         log.info("SegmentIO bufferStore started");
         log.info("SegmentIO reporter client {} started", reporter.getDefaultClientClass().getSimpleName());
         MetricsCounter metricsCounter = reporter.getMetricsCounter();
@@ -68,29 +70,15 @@ public final class SegmentIO  {
         }
     }
 
-
     /**
      * 优雅关机，避免spring销毁时，重复调用shutdown方法，这里函数名字不要用close,destroy,shutdown
      */
     public void tryShutdown() {
         // 关闭分布式新事件
-        Optional.ofNullable(distributedStore).ifPresent(Store::shutdown);
-        // 关闭数据库拉取事件
-        Optional.ofNullable(logStore).ifPresent(Store::shutdown);
+        Optional.ofNullable(distributedBuffer).ifPresent(Buffer::shutdown);
         // 本地buffer仓库事件清理
-        bufferStore.shutdown();
+        localBuffer.shutdown();
         log.info("SegmentIO shutdown");
-    }
-
-    /**
-     * 开始从数据库拉取失败事件上报
-     */
-    public boolean startResend() {
-        if (null != logStore) {
-            logStore.accept(list -> list.forEach(bufferStore::commit));
-            return true;
-        }
-        return false;
     }
 
 
@@ -123,11 +111,11 @@ public final class SegmentIO  {
                 .mapNotNull(this::buildMessage)
                 .flatMap(event -> {
                     // 尝试分布式贮藏
-                    return Mono.defer(() -> distributedStore.commit(event))
+                    return Mono.defer(() -> distributedBuffer.commit(event))
                             // 如果分布式存储失败，尝试本地缓冲后直接上报
-                            .onErrorResume(ex -> bufferStore.commit(event))
+                            .onErrorResume(ex -> localBuffer.commit(event))
                             // 如果本地缓冲失败，则进行持久化
-                            .onErrorResume(ex -> tryPersist(event, false));
+                            .onErrorResume(ex -> tryLog(event, false));
                 })
                 .onErrorResume(ex -> {
                     log.error("deliver failed", ex);
@@ -143,7 +131,7 @@ public final class SegmentIO  {
                 .doOnSuccess(b -> {
                     log.debug("consume success, data: {}, result: {}", events, b);
                     Flux.fromIterable(events)
-                            .flatMap(event -> tryPersist(event, true))
+                            .flatMap(event -> tryLog(event, true))
                             .subscribeOn(Schedulers.boundedElastic())
                             .subscribe();
                 })
@@ -151,22 +139,23 @@ public final class SegmentIO  {
                 .onErrorResume(throwable -> {
                     log.warn("batch report failed, switching to single event processing.", throwable);
                     return Flux.fromIterable(events)
-                            .flatMap(event -> tryPersist(event, false))
-                            .all(result -> result) // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
-                            .flatMap(Mono::just);
+                            .flatMap(event -> tryLog(event, false))
+                            .all(result -> result); // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
                 })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
     }
 
-    private Mono<Boolean> tryPersist(Message event, boolean result) {
-        return Mono.defer(() -> logStore.commit(SegmentLogMessage.builder()
-                                    .message(event)
-                                    .result(result)
-                                    .secret(secret)
-                                    .reportApp(reportApp)
-                .build()))
+    private Mono<Boolean> tryLog(Message event, boolean result) {
+        return Mono.defer(() ->
+                    eventLogger.send(List.of(SegmentLogMessage.builder()
+                            .message(event)
+                            .result(result)
+                            .secret(secret)
+                            .reportApp(reportApp)
+                            .build()))
+                )
                 .onErrorResume(ex -> {
                     log.warn("persist failed, event: {}", event, ex);
                     return Mono.just(Boolean.FALSE);

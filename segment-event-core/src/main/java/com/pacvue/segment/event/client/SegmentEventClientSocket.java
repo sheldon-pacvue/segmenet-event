@@ -12,7 +12,6 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -61,9 +60,7 @@ public class SegmentEventClientSocket implements SegmentEventClient {
                     }
                     IoUtil.writeUtf8(socket.getOutputStream(), false, createMessage(events));
                     return true;
-                })
-                // 将阻塞调用交由线程池执行
-                .subscribeOn(Schedulers.boundedElastic());
+                });
     }
 
     // 启动超时检查定时任务

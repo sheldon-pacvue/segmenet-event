@@ -1,15 +1,16 @@
 package com.pacvue.segment.event.springboot.configuration;
 
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
+import com.pacvue.segment.event.client.SegmentEventClientRabbit;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
-import com.pacvue.segment.event.springboot.properties.LogStoreProperties;
+import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
-import com.pacvue.segment.event.store.RabbitMQDistributedStore;
-import com.pacvue.segment.event.store.Store;
+import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
+import com.pacvue.segment.event.buffer.Buffer;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -75,9 +76,9 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = LogStoreProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
-    @ConditionalOnMissingBean(name = "logStore")
-    public Store<SegmentLogMessage> logStore(LogStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    @ConditionalOnProperty(prefix = LoggerProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
+    @ConditionalOnMissingBean(name = "eventLogger")
+    public SegmentEventClientRabbit eventLogger(LoggerProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         RabbitMQRemoteStoreProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -89,22 +90,20 @@ public class SegmentEventAutoConfiguration {
         channel.queueDeclare(config.getQueueName(), true, false, false, null);
         channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
 
-        return RabbitMQDistributedStore.<SegmentLogMessage>builder()
-                .connection(connection)
+        return SegmentEventClientRabbit.<SegmentLogMessage>builder()
                 .channel(channel)
                 .exchangeName(config.getExchangeName())
                 .routingKey(config.getRoutingKey())
                 .queueName(config.getQueueName())
-                .build()
-                .setInstanceId("persistingStore");
+                .build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Optional<Store<SegmentLogMessage>> logStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientRabbit eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .logStore(logStore.orElse(null))
+                .eventLogger(eventLogger)
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
                 .build();

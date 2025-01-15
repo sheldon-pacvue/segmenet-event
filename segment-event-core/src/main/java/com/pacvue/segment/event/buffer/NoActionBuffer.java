@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 @Builder
 @Slf4j
-public class NoActionStore<T extends Message> extends AbstractStore<T> {
+public class NoActionBuffer<T extends Message> extends AbstractBuffer<T> {
 
     @NotNull
     @Override

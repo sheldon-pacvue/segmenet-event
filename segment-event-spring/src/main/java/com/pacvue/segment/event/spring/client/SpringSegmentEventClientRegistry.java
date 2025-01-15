@@ -2,7 +2,6 @@ package com.pacvue.segment.event.spring.client;
 
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
-import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

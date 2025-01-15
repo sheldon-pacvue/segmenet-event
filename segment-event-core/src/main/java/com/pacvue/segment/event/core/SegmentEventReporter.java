@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 
@@ -38,7 +39,8 @@ public final class SegmentEventReporter {
                        helium10.segmentio.async.send-events.count 100 1245547899
                      */
                     Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.size()));
-                });
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
 

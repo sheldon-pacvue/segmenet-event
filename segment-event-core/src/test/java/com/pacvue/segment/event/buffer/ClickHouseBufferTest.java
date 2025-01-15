@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
@@ -11,8 +11,8 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-class ClickHouseStoreTest {
-    private static ClickHouseStore<SegmentLogMessage> store;
+class ClickHouseBufferTest {
+    private static ClickHouseBuffer<SegmentLogMessage> store;
 
     @BeforeAll
     static void setUp() throws IOException {
@@ -26,7 +26,7 @@ class ClickHouseStoreTest {
         properties.setProperty("druid.testWhileIdle", "true");
 
         dataSource.configFromPropeties(properties);
-        store = ClickHouseStore.builder()
+        store = ClickHouseBuffer.builder()
                 .dataSource(dataSource)
                 .tableName("SegmentEventLog")
                 .loopIntervalMinutes(1)

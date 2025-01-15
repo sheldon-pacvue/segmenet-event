@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import com.segment.analytics.messages.TrackMessage;
@@ -10,10 +10,10 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-class ReactorLocalStoreTest {
+class ReactorLocalBufferTest {
     private final static int BUFFER_TIMEOUT = 2;
 
-    private final ReactorLocalStore<Message> reactorLocalStore = ReactorLocalStore.builder().bufferSize(2).bufferTimeoutSeconds(2).build();
+    private final ReactorLocalBuffer<Message> reactorLocalStore = ReactorLocalBuffer.builder().bufferSize(2).bufferTimeoutSeconds(2).build();
 
     /**
      * shutdown后提交，抛出异常

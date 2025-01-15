@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.store;
+package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 @Builder
 @Slf4j
-public class ReactorLocalStore<T extends Message> extends AbstractStore<T> {
+public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
     @Builder.Default
     private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer();
     @Builder.Default
