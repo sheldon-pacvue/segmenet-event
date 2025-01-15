@@ -49,3 +49,4 @@ node_modules/
 # 应用配置文件
 *.env
 .flattened-pom.xml
+.vscode
