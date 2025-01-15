@@ -173,11 +173,11 @@ public final class SegmentIO  {
                 });
     }
 
-    private <T extends MessageBuilder<?, ?>> Message buildMessage(T builder) {
+    private <V extends MessageBuilder<?, ?>> Message buildMessage(V builder) {
         for (MessageTransformer messageTransformer : messageTransformers) {
             boolean shouldContinue = messageTransformer.transform(builder);
             if (!shouldContinue) {
-                log.info("{} Skipping message {}.", messageTransformer.getClass(), builder);
+                log.info("Transformer {} Skipping message {}.", messageTransformer.getClass(), builder);
                 return null;
             }
         }
@@ -185,7 +185,7 @@ public final class SegmentIO  {
         for (MessageInterceptor messageInterceptor : messageInterceptors) {
             message = messageInterceptor.intercept(message);
             if (message == null) {
-                log.info("{} Skipping message {}.", messageInterceptor.getClass(), builder);
+                log.info("Interceptor {} Skipping message {}.", messageInterceptor.getClass(), builder);
                 return null;
             }
         }
