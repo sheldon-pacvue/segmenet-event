@@ -3,7 +3,7 @@ package com.pacvue.segment.event.example.configuration;
 import com.pacvue.segment.event.client.*;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentPersistingMessage;
+import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
@@ -137,11 +137,11 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentPersistingMessage>> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentLogMessage>> logStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
-                .persistingStore(persistingStore.orElse(null))
+                .logStore(logStore.orElse(null))
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
                 .build();

@@ -1,6 +1,6 @@
 package com.pacvue.segment.event.core;
 
-import com.pacvue.segment.event.entity.SegmentPersistingMessage;
+import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.store.ReactorLocalStore;
@@ -30,7 +30,7 @@ public final class SegmentIO  {
     /**
      * 非必须： report到segment失败，或者记录发送
      */
-    private final Store<SegmentPersistingMessage> persistingStore;
+    private final Store<SegmentLogMessage> logStore;
     /**
      * 必须： 用于本地事件的缓冲，满足条件后批量进行上报
      */
@@ -76,7 +76,7 @@ public final class SegmentIO  {
         // 关闭分布式新事件
         Optional.ofNullable(distributedStore).ifPresent(Store::shutdown);
         // 关闭数据库拉取事件
-        Optional.ofNullable(persistingStore).ifPresent(Store::shutdown);
+        Optional.ofNullable(logStore).ifPresent(Store::shutdown);
         // 本地buffer仓库事件清理
         bufferStore.shutdown();
         log.info("SegmentIO shutdown");
@@ -86,8 +86,8 @@ public final class SegmentIO  {
      * 开始从数据库拉取失败事件上报
      */
     public boolean startResend() {
-        if (null != persistingStore) {
-            persistingStore.accept(list -> list.forEach(bufferStore::commit));
+        if (null != logStore) {
+            logStore.accept(list -> list.forEach(bufferStore::commit));
             return true;
         }
         return false;
@@ -147,11 +147,11 @@ public final class SegmentIO  {
                             .subscribeOn(Schedulers.boundedElastic())
                             .subscribe();
                 })
-                // 如果上报失败优先回流到distributedStore，如果失败进入数据库
+                // 如果上报失败，进入持久化仓库
                 .onErrorResume(throwable -> {
-                    log.warn("batch report failed, switching to single event processing. Error: {}", throwable.getMessage(), throwable);
+                    log.warn("batch report failed, switching to single event processing.", throwable);
                     return Flux.fromIterable(events)
-                            .flatMap(event -> distributedStore.commit(event).onErrorResume(ex -> tryPersist(event, false)))
+                            .flatMap(event -> tryPersist(event, false))
                             .all(result -> result) // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
                             .flatMap(Mono::just);
                 })
@@ -161,7 +161,7 @@ public final class SegmentIO  {
     }
 
     private Mono<Boolean> tryPersist(Message event, boolean result) {
-        return Mono.defer(() -> persistingStore.commit(SegmentPersistingMessage.builder()
+        return Mono.defer(() -> logStore.commit(SegmentLogMessage.builder()
                                     .message(event)
                                     .result(result)
                                     .secret(secret)

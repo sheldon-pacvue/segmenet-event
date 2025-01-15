@@ -3,7 +3,7 @@ package com.pacvue.segment.event.store;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import com.pacvue.segment.event.entity.SegmentPersistingMessage;
+import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -18,12 +18,12 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 import javax.sql.*;
 
-import static com.pacvue.segment.event.entity.SegmentPersistingMessage.LOG_OPERATION_SEND_TO_SEGMENT;
+import static com.pacvue.segment.event.entity.SegmentLogMessage.LOG_OPERATION_SEND_TO_SEGMENT;
 
 
 @Builder
 @Slf4j
-public class ClickHouseStore<T extends SegmentPersistingMessage> extends AbstractStore<T> {
+public class ClickHouseStore<T extends SegmentLogMessage> extends AbstractStore<T> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;

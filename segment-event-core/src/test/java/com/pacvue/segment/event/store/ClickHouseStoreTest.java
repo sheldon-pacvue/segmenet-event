@@ -1,6 +1,7 @@
 package com.pacvue.segment.event.store;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.pacvue.segment.event.entity.SegmentLogMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 class ClickHouseStoreTest {
-    private static ClickHouseStore store;
+    private static ClickHouseStore<SegmentLogMessage> store;
 
     @BeforeAll
     static void setUp() throws IOException {

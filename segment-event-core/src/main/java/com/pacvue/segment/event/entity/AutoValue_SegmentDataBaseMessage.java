@@ -9,7 +9,7 @@ import java.util.Map;
 
 
 @ToString
-final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
+final class AutoValue_SegmentDataBaseMessage extends SegmentLogMessage {
     private final Message message;
     private final boolean result;
     private final String reportApp;

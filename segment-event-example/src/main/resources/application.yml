@@ -13,14 +13,14 @@ segment:
           exchangeName: amq.direct
           routingKey: segment-event-example
           queueName: segment-event-example
-      persisting:
+      log:
         clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties
         properties:
           uri: amqp://deploy:deploy@localhost:5678
           exchangeName: amq.direct
           routingKey: segment-event-example2
           queueName: segment-event-example2
-#      persisting:
+#      log:
 #        data-source-properties:
 #          druid:
 #            driver-class-name: com.clickhouse.jdbc.ClickHouseDriver

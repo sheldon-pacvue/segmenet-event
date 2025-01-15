@@ -4,9 +4,8 @@ import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentPersistingMessage;
-import com.pacvue.segment.event.springboot.properties.DistributedStoreProperties;
-import com.pacvue.segment.event.springboot.properties.PersistingStoreProperties;
+import com.pacvue.segment.event.entity.SegmentLogMessage;
+import com.pacvue.segment.event.springboot.properties.LogStoreProperties;
 import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
@@ -23,7 +22,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -77,9 +75,9 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = PersistingStoreProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
-    @ConditionalOnMissingBean(name = "persistingStore")
-    public Store<SegmentPersistingMessage> persistingStore(PersistingStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    @ConditionalOnProperty(prefix = LogStoreProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
+    @ConditionalOnMissingBean(name = "logStore")
+    public Store<SegmentLogMessage> logStore(LogStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         RabbitMQRemoteStoreProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -91,7 +89,7 @@ public class SegmentEventAutoConfiguration {
         channel.queueDeclare(config.getQueueName(), true, false, false, null);
         channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
 
-        return RabbitMQDistributedStore.<SegmentPersistingMessage>builder()
+        return RabbitMQDistributedStore.<SegmentLogMessage>builder()
                 .connection(connection)
                 .channel(channel)
                 .exchangeName(config.getExchangeName())
@@ -103,10 +101,10 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Optional<Store<SegmentPersistingMessage>> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Optional<Store<SegmentLogMessage>> logStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .persistingStore(persistingStore.orElse(null))
+                .logStore(logStore.orElse(null))
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
                 .build();

@@ -4,6 +4,7 @@ import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.segment.analytics.messages.Message;
 import com.segment.analytics.messages.TrackMessage;
 import org.junit.jupiter.api.*;
 
@@ -23,7 +24,7 @@ class RabbitMQDistributedStoreTest {
     private final static String EXCHANGE = "amq.direct";
     private final static String ROUTING_KEY = "segment-event-example";
     private final static String QUEUE_NAME = "segment-event-example";
-    private static RabbitMQDistributedStore store;
+    private static RabbitMQDistributedStore<Message> store;
 
     @BeforeAll
     static void setUp() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {

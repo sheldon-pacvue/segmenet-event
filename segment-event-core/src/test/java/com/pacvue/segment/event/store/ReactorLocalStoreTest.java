@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 class ReactorLocalStoreTest {
     private final static int BUFFER_TIMEOUT = 2;
 
-    private final ReactorLocalStore reactorLocalStore = ReactorLocalStore.builder().bufferSize(2).bufferTimeoutSeconds(2).build();
+    private final ReactorLocalStore<Message> reactorLocalStore = ReactorLocalStore.builder().bufferSize(2).bufferTimeoutSeconds(2).build();
 
     /**
      * shutdown后提交，抛出异常

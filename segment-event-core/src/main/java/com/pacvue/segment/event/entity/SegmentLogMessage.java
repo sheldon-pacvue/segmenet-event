@@ -9,7 +9,7 @@ import java.io.Serializable;
 
 @AutoValue
 @AutoGson
-public abstract class SegmentPersistingMessage implements Message, Serializable {
+public abstract class SegmentLogMessage implements Message, Serializable {
     public final static int LOG_OPERATION_SEND_TO_SQS = 1;
     public final static int LOG_OPERATION_SEND_TO_SEGMENT = 2;
 
@@ -64,7 +64,7 @@ public abstract class SegmentPersistingMessage implements Message, Serializable 
             return this;
         }
 
-        public SegmentPersistingMessage build() {
+        public SegmentLogMessage build() {
             return new AutoValue_SegmentDataBaseMessage(message, result, reportApp, operation, secret);
         }
     }
