@@ -12,12 +12,14 @@ import java.util.Map;
 final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
     private final Message message;
     private final boolean result;
+    private final String reportApp;
     private final int operation;
     private final String secret;
 
-    AutoValue_SegmentDataBaseMessage(Message message, boolean result, int operation, String secret) {
+    AutoValue_SegmentDataBaseMessage(Message message, boolean result, String reportApp, int operation, String secret) {
         this.message = message;
         this.result = result;
+        this.reportApp = reportApp;
         this.operation = operation;
         this.secret = secret;
     }
@@ -30,6 +32,11 @@ final class AutoValue_SegmentDataBaseMessage extends SegmentPersistingMessage {
     @Override
     public boolean result() {
         return result;
+    }
+
+    @Override
+    public String reportApp() {
+        return reportApp;
     }
 
     @Override

@@ -17,6 +17,8 @@ public abstract class SegmentPersistingMessage implements Message, Serializable 
 
     public abstract boolean result();
 
+    public abstract String reportApp();
+
     public abstract int operation();
 
     public abstract String secret();
@@ -26,15 +28,16 @@ public abstract class SegmentPersistingMessage implements Message, Serializable 
     }
 
     public Builder toBuilder() {
-        return builder().message(message()).result(result()).operation(operation());
+        return builder().message(message()).result(result()).operation(operation()).reportApp(reportApp()).secret(secret());
     }
 
 
     public static class Builder {
         private Message message;
         private boolean result;
-        private String secret;
+        private String reportApp;
         private int operation = LOG_OPERATION_SEND_TO_SEGMENT;
+        private String secret;
 
         public Builder message(Message message) {
             this.message = message;
@@ -43,6 +46,11 @@ public abstract class SegmentPersistingMessage implements Message, Serializable 
 
         public Builder result(boolean result) {
             this.result = result;
+            return this;
+        }
+
+        public Builder reportApp(String reportApp) {
+            this.reportApp = reportApp;
             return this;
         }
 
@@ -57,7 +65,7 @@ public abstract class SegmentPersistingMessage implements Message, Serializable 
         }
 
         public SegmentPersistingMessage build() {
-            return new AutoValue_SegmentDataBaseMessage(message, result, operation, secret);
+            return new AutoValue_SegmentDataBaseMessage(message, result, reportApp, operation, secret);
         }
     }
 }

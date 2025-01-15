@@ -4,13 +4,14 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.pacvue.segment.event.springboot.properties.SegmentEventClientAnalyticsProperties.PROPERTIES_PREFIX;
+import static com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties.PROPERTIES_PREFIX;
 
 @Data
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
-public class SegmentEventClientAnalyticsProperties {
-  public final static String PROPERTIES_PREFIX = "segment.event.client.analytics";
+public class SegmentEventClientProperties {
+  public final static String PROPERTIES_PREFIX = "segment.event";
 
   private String secret;
+  private String appId;
 }

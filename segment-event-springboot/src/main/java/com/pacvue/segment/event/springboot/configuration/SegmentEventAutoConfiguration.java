@@ -8,7 +8,7 @@ import com.pacvue.segment.event.entity.SegmentPersistingMessage;
 import com.pacvue.segment.event.springboot.properties.DistributedStoreProperties;
 import com.pacvue.segment.event.springboot.properties.PersistingStoreProperties;
 import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
-import com.pacvue.segment.event.springboot.properties.SegmentEventClientAnalyticsProperties;
+import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
 import com.pacvue.segment.event.store.RabbitMQDistributedStore;
 import com.pacvue.segment.event.store.Store;
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -43,9 +43,9 @@ import java.util.concurrent.TimeoutException;
 })
 public class SegmentEventAutoConfiguration {
     @Bean
-    @ConditionalOnProperty(prefix = SegmentEventClientAnalyticsProperties.PROPERTIES_PREFIX, name = "secret")
+    @ConditionalOnProperty(prefix = SegmentEventClientProperties.PROPERTIES_PREFIX, name = "secret")
     @ConditionalOnMissingBean
-    public Analytics segmentAnalytics(SegmentEventClientAnalyticsProperties properties) {
+    public Analytics segmentAnalytics(SegmentEventClientProperties properties) {
         Logger log = LoggerFactory.getLogger(Analytics.class);
         return Analytics.builder(properties.getSecret())
                 .log(new Log() {
@@ -103,10 +103,12 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Optional<Store<SegmentPersistingMessage>> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Optional<Store<SegmentPersistingMessage>> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .persistingStore(persistingStore.orElse(null))
+                .secret(properties.getSecret())
+                .reportApp(properties.getAppId())
                 .build();
     }
 }

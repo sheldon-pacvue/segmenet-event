@@ -43,6 +43,10 @@ public final class SegmentIO  {
     @Builder.Default
     @NonNull
     private final List<MessageInterceptor> messageInterceptors = new ArrayList<>();
+    @NonNull
+    private final String secret;
+    @NonNull
+    private final String reportApp;
 
     /**
      * 开始接受事件，并且开始上报
@@ -121,7 +125,9 @@ public final class SegmentIO  {
                     // 尝试分布式贮藏
                     return Mono.defer(() -> distributedStore.commit(event))
                             // 如果分布式存储失败，尝试本地缓冲后直接上报
-                            .onErrorResume(ex -> bufferStore.commit(event));
+                            .onErrorResume(ex -> bufferStore.commit(event))
+                            // 如果本地缓冲失败，则进行持久化
+                            .onErrorResume(ex -> tryPersist(event, false));
                 })
                 .onErrorResume(ex -> {
                     log.error("deliver failed", ex);
@@ -155,14 +161,19 @@ public final class SegmentIO  {
     }
 
     private Mono<Boolean> tryPersist(Message event, boolean result) {
-        return Mono.defer(() -> persistingStore.commit(SegmentPersistingMessage.builder().message(event).result(result).build()))
+        return Mono.defer(() -> persistingStore.commit(SegmentPersistingMessage.builder()
+                                    .message(event)
+                                    .result(result)
+                                    .secret(secret)
+                                    .reportApp(reportApp)
+                .build()))
                 .onErrorResume(ex -> {
                     log.warn("persist failed, event: {}", event, ex);
                     return Mono.just(Boolean.FALSE);
                 });
     }
 
-    private Message buildMessage(MessageBuilder builder) {
+    private <T extends MessageBuilder<?, ?>> Message buildMessage(T builder) {
         for (MessageTransformer messageTransformer : messageTransformers) {
             boolean shouldContinue = messageTransformer.transform(builder);
             if (!shouldContinue) {

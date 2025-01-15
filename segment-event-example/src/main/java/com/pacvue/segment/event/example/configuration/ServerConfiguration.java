@@ -55,11 +55,11 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientSocket segmentEventClientSocket(SegmentEventClientSocketProperties properties) {
+    public SegmentEventClientSocket segmentEventClientSocket(SegmentEventClientProperties common, SegmentEventClientSocketProperties properties) {
         return SegmentEventClientSocket.builder()
                 .host(properties.getHost())
                 .port(properties.getPort())
-                .secret(properties.getSecret())
+                .secret(common.getSecret())
                 .endPoint(properties.getEndPoint())
                 .build();
     }
@@ -137,11 +137,13 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentPersistingMessage>> persistingStore) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Store<Message> distributedStore, Optional<Store<SegmentPersistingMessage>> persistingStore) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedStore(distributedStore)
                 .persistingStore(persistingStore.orElse(null))
+                .secret(properties.getSecret())
+                .reportApp(properties.getAppId())
                 .build();
     }
 }

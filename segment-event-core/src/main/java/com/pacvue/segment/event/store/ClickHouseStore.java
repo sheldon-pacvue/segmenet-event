@@ -108,7 +108,8 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
                    `operation` UInt8,
                    `createdAt` Int32,
                    `eventTime` Int32,
-                   `secret` String
+                   `secret` String,
+                   `reportApp` String
                )
                ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/%s', '{replica}')
                PARTITION BY toYYYYMM(eventDate)
@@ -132,8 +133,8 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
     private boolean insertData(T event) {
         // 插入的SQL语句
         String insertSQL = """
-            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime, secret)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime, secret, reportApp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.formatted(tableName);  // 用表名替换占位符
 
         try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
@@ -148,7 +149,8 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
             preparedStatement.setInt(7, event.operation());  // operation
             preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
             preparedStatement.setLong(9, Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toTimestamp).map(Timestamp::getTime).orElse(0L));  // eventTime
-            preparedStatement.setString(10, event.secret());
+            preparedStatement.setString(10, event.secret());  // secret
+            preparedStatement.setString(11, event.reportApp());  // reportApp
 
             boolean result = preparedStatement.execute();
             log.debug("[{}] data inserted successfully!, result: {}", instanceId, result);
@@ -161,7 +163,7 @@ public class ClickHouseStore<T extends SegmentPersistingMessage> extends Abstrac
     private List<Message> queryData() throws Exception {
         String querySQL = """
                 SELECT MAX(eventDate), hash, MAX(type) as type, MAX(userId) as userId, SUM(result) as result,
-                        MAX(message) as message, MIN(eventTime) as eventTime, MAX(secret) as secret
+                        MAX(message) as message, MIN(eventTime) as eventTime, MAX(secret) as secret, MAX(reportApp) as reportApp
                 FROM %s
                 WHERE eventDate >= toDate(now() - INTERVAL 2 DAY)
                 AND operation = %d

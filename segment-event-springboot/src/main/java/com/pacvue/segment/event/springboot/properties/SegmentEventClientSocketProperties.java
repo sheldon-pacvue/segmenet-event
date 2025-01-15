@@ -15,5 +15,4 @@ public class SegmentEventClientSocketProperties {
     private String host;
     private Integer port;
     private String endPoint;
-    private String secret;
 }

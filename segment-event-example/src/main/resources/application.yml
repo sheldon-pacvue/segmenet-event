@@ -9,14 +9,14 @@ segment:
       distributed:
         clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties
         properties:
-          uri: amqp://deploy:deploy@localhost:5672
+          uri: amqp://deploy:deploy@localhost:5678
           exchangeName: amq.direct
           routingKey: segment-event-example
           queueName: segment-event-example
       persisting:
         clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties
         properties:
-          uri: amqp://deploy:deploy@localhost:5672
+          uri: amqp://deploy:deploy@localhost:5678
           exchangeName: amq.direct
           routingKey: segment-event-example2
           queueName: segment-event-example2
@@ -43,9 +43,8 @@ segment:
         end-point: "/v1/import"
         host: "localhost"
         port: 9090
-        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
-      analytics:
-        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
+    secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
+    app-id: segment-event-example
 management:
   endpoints:
     web:
