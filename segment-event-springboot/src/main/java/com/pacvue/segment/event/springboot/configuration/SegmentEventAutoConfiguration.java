@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -67,6 +68,28 @@ public class SegmentEventAutoConfiguration {
         return SegmentEventReporter.builder().client(segmentEventClientAnalytics).build();
     }
 
+    /**
+     * CREATE TABLE default.SegmentEventLog
+     * (
+     *     `eventDate` Date,
+     *     `hash` String,
+     *     `userId` String,
+     *     `type` String,
+     *     `message` String,
+     *     `result` UInt8,
+     *     `operation` UInt8,
+     *     `createdAt` Int32,
+     *     `eventTime` Int32
+     * )
+     * ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/SegmentEventsLog',
+     *  '{replica}')
+     * PARTITION BY toYYYYMM(eventDate)
+     * ORDER BY (userId,
+     *  eventDate,
+     *  type,
+     *  result)
+     * SETTINGS index_granularity = 8192;
+     */
     @Bean
     public SegmentEventClientClickHouse<SegmentLogMessage> eventLogger(LoggerProperties properties) {
         ClickHouseProperties clickhouse = properties.getClickhouse();
@@ -84,8 +107,8 @@ public class SegmentEventAutoConfiguration {
                         event.toString(),
                         event.result(),
                         event.operation(),
-                        DateUtil.date().getTime(),
-                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).orElse(0L)
+                        DateUtil.date().getTime() / 1000,
+                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).map(i -> i / 1000).orElse(0L)
                 })
                 .build();
     }

@@ -98,10 +98,4 @@ public class HttpProperties {
      * 设置在请求失败时的最大重试次数。可以通过`HttpClient`的重试机制进行配置，增强容错性。
      */
     private int retry = 3;
-
-    /**
-     * 登陆态
-     */
-    private String secret = "123123";
-
 }

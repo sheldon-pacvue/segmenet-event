@@ -7,7 +7,7 @@ import static com.pacvue.segment.event.springboot.properties.LocalBufferProperti
 
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
 public class LocalBufferProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.store.local";
+    public final static String PROPERTIES_PREFIX = "segment.event.local";
 
     private ReactorProperties reactor;
 }

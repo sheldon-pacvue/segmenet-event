@@ -3,6 +3,15 @@ spring:
     name: segment-event-example
     port: 9090
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+
 segment:
   event:
     logger:
@@ -18,16 +27,14 @@ segment:
         insertSql: |
           INSERT INTO SegmentEventLog (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    store:
-      distributed:
-        rabbit:
-          uri: amqp://deploy:deploy@localhost:5678
-          exchangeName: amq.direct
-          routingKey: segment-event-example
-          queueName: segment-event-example
+    distributed:
+      rabbit:
+        uri: amqp://deploy:deploy@localhost:5678
+        exchangeName: amq.direct
+        routingKey: segment-event-example
+        queueName: segment-event-example
     client:
       http:
-        secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
         base-url: "http://localhost:8080"
       file:
         path: "segment"
@@ -39,11 +46,3 @@ segment:
         port: 9090
     secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
     app-id: ${spring.application.name}
-management:
-  endpoints:
-    web:
-      exposure:
-        include: prometheus
-  endpoint:
-    prometheus:
-      enabled: true

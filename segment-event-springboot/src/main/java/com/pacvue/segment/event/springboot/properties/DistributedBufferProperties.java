@@ -12,7 +12,7 @@ import static com.pacvue.segment.event.springboot.properties.DistributedBufferPr
 @Accessors(chain = true)
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
 public class DistributedBufferProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.store.distributed";
+    public final static String PROPERTIES_PREFIX = "segment.event.distributed";
 
     private RabbitMQProperties rabbit;
     private ClickHouseProperties clickhouse;

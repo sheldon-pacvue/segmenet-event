@@ -64,7 +64,7 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientHttp<Message> segmentEventClientHttp(ClientProperties properties) {
+    public SegmentEventClientHttp<Message> segmentEventClientHttp(ClientProperties properties, SegmentEventClientProperties common) {
         HttpProperties http = properties.getHttp();
         // 设置 ConnectionProvider 配置
         ConnectionProvider provider = ConnectionProvider.builder(http.getThreadName())
@@ -88,7 +88,8 @@ public class ServerConfiguration {
                 .uri(http.getUri())
                 .method(http.getMethod())
                 .retry(http.getRetry())
-                .secret(http.getSecret()).build();
+                .secret(common.getSecret())
+                .build();
     }
 
     @Bean
