@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
-@RequestMapping("/v1/segment/log/event")
+@RequestMapping("/v1/log")
 public class SegmentLogEventController {
     @PostMapping("/report")
     public Mono<Boolean> report(@RequestBody SegmentLogMessage message) {

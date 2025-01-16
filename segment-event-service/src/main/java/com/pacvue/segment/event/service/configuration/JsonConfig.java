@@ -6,17 +6,12 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.pacvue.segment.event.service.entity.dto.*;
-import com.segment.analytics.gson.AutoValueAdapterFactory;
-import com.segment.analytics.gson.ISO8601DateAdapter;
 import com.segment.analytics.messages.Message;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
-import java.util.Date;
 
 @Configuration
 public class JsonConfig {
@@ -31,7 +26,7 @@ public class JsonConfig {
 
     public static class MessageDeserializer extends JsonDeserializer<Message> {
         @Override
-        public Message deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        public Message deserialize(JsonParser p, DeserializationContext dc) throws IOException {
             JsonNode node = p.getCodec().readTree(p);
             String type = node.get("type").asText();
 

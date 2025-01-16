@@ -6,3 +6,10 @@ spring:
     username: your_username
     password: your_password
     driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+server:
+  servlet:
+    context-path: /api
+  context-path: /segment
+  webflux:
+    base-path: /api
+
