@@ -1,5 +1,7 @@
 package com.pacvue.segment.event.client;
 
+import com.segment.analytics.messages.Message;
+
 public interface SegmentEventClientRegistry {
-    <T extends SegmentEventClient> T getClient(Class<T> tClass);
+    SegmentEventClient<Message> getClient(String type);
 }

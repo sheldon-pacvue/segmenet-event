@@ -17,7 +17,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Slf4j
-public class SegmentEventClientFile implements SegmentEventClient {
+public class SegmentEventClientFile<T extends Message> implements SegmentEventClient<T> {
     private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
     private final String path;
@@ -32,7 +32,7 @@ public class SegmentEventClientFile implements SegmentEventClient {
     }
 
     @Override
-    public Mono<Boolean> send(List<Message> events) {
+    public Mono<Boolean> send(List<T> events) {
         return Mono.create(sink -> {
             bundle(false);
 
@@ -40,6 +40,11 @@ public class SegmentEventClientFile implements SegmentEventClient {
             FileUtil.writeLines(events, file, StandardCharsets.UTF_8, true);
             sink.success(true);
         });
+    }
+
+    @Override
+    public String getType() {
+        return "file";
     }
 
     private void bundle(boolean focus) {
@@ -128,32 +133,32 @@ public class SegmentEventClientFile implements SegmentEventClient {
     protected void afterCompressFile(File zipFile) {}
 
 
-    public static SegmentEventClientFile.Builder builder() {
-        return new SegmentEventClientFile.Builder();
+    public static <T extends Message> SegmentEventClientFile.Builder<T> builder() {
+        return new SegmentEventClientFile.Builder<>();
     }
 
-    public static class Builder {
+    public static class Builder<T extends Message> {
         private String path;
         private String fileName;
         private long maxFileSizeMb = 100;
 
-        public SegmentEventClientFile.Builder path(String path) {
+        public SegmentEventClientFile.Builder<T> path(String path) {
             this.path = path;
             return this;
         }
 
-        public SegmentEventClientFile.Builder fileName(String fileName) {
+        public SegmentEventClientFile.Builder<T> fileName(String fileName) {
             this.fileName = fileName;
             return this;
         }
 
-        public SegmentEventClientFile.Builder maxFileSizeMb(long maxFileSizeMb) {
+        public SegmentEventClientFile.Builder<T> maxFileSizeMb(long maxFileSizeMb) {
             this.maxFileSizeMb = maxFileSizeMb;
             return this;
         }
 
-        public SegmentEventClientFile build() {
-            return new SegmentEventClientFile(path, fileName, maxFileSizeMb);
+        public SegmentEventClientFile<T> build() {
+            return new SegmentEventClientFile<>(path, fileName, maxFileSizeMb);
         }
     }
 }

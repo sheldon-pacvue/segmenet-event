@@ -27,10 +27,10 @@ public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
     public Mono<Boolean> commit(@NotNull T event) {
         Sinks.EmitResult emitResult = sink.tryEmitNext(event);
         if (emitResult.isFailure()) {
-            log.debug("[{}] event commit failed, event：{}, reason: {}", instanceId, event, emitResult);
+            log.debug("event commit failed, event：{}, reason: {}", event, emitResult);
             throw new RuntimeException("publish failed. " + emitResult);
         }
-        log.debug("[{}] event commit success, event：{}", instanceId, event);
+        log.debug("event commit success, event：{}", event);
         return Mono.just(emitResult.isSuccess());
     }
 
@@ -38,11 +38,11 @@ public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
     @Override
     protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
         Disposable accepted = sink.asFlux().bufferTimeout(bufferSize, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
-                            log.debug("[{}] event consume start, events：{}", instanceId, events);
+                            log.debug("event consume start, events：{}", events);
                             consumer.accept(events);
                         },
-                        error -> log.error("[{}] error consuming events", instanceId, error),
-                        () -> log.debug("[{}] event consumption complete.", instanceId));
+                        error -> log.error("error consuming events", error),
+                        () -> log.info("event consumption complete."));
         return () -> {
             sink.tryEmitComplete();
             accepted.dispose();

@@ -26,10 +26,10 @@ public final class SegmentEventReporter {
 
     @Builder.Default
     @Getter
-    private Class<? extends SegmentEventClient> defaultClientClass = SegmentEventClientAnalytics.class;
+    private String defaultClientType = "analytics";
 
-    public Mono<Boolean> report(List<Message> events, Class<? extends SegmentEventClient> clazz) {
-        SegmentEventClient client = registry.getClient(clazz);
+    public Mono<Boolean> report(List<Message> events, String type) {
+        SegmentEventClient<Message> client = registry.getClient(type);
         return client.send(events)
                 .doOnSuccess(b -> {
                     /*
@@ -43,8 +43,7 @@ public final class SegmentEventReporter {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-
     public Mono<Boolean> reportDefault(List<Message> events) {
-        return report(events, defaultClientClass);
+        return report(events, defaultClientType);
     }
 }

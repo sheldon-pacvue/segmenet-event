@@ -23,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class SegmentEventClientSocket implements SegmentEventClient {
+public class SegmentEventClientSocket<T extends Message> implements SegmentEventClient<T> {
     private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final static int SOCKET_TIMEOUT = 5;
     // 常量定义
@@ -47,7 +47,7 @@ public class SegmentEventClientSocket implements SegmentEventClient {
 
 
     @Override
-    public Mono<Boolean> send(List<Message> events) {
+    public Mono<Boolean> send(List<T> events) {
         // 向服务端发送消息
         return Mono.fromCallable(() -> {
                     lastActivityTime = System.currentTimeMillis();
@@ -61,6 +61,11 @@ public class SegmentEventClientSocket implements SegmentEventClient {
                     IoUtil.writeUtf8(socket.getOutputStream(), false, createMessage(events));
                     return true;
                 });
+    }
+
+    @Override
+    public String getType() {
+        return "socket";
     }
 
     // 启动超时检查定时任务
@@ -79,7 +84,7 @@ public class SegmentEventClientSocket implements SegmentEventClient {
         }, 0, 1, TimeUnit.MINUTES);  // 每分钟检查一次
     }
 
-    protected String createMessage(List<Message> events) {
+    protected String createMessage(List<T> events) {
         // 验证事件列表和内容
         if (events == null || events.isEmpty()) {
             throw new IllegalArgumentException("Events list is empty or null");
@@ -112,7 +117,7 @@ public class SegmentEventClientSocket implements SegmentEventClient {
     /**
      * 从事件列表中提取 library 的名称和版本信息。
      */
-    private String[] extractLibraryInfo(List<Message> events) {
+    private String[] extractLibraryInfo(List<T> events) {
         String libName = DEFAULT_LIB_NAME;
         String libVersion = DEFAULT_LIB_VERSION;
 
@@ -131,38 +136,38 @@ public class SegmentEventClientSocket implements SegmentEventClient {
         return new String[]{libName, libVersion};
     }
 
-    public static SegmentEventClientSocket.Builder builder() {
-        return new SegmentEventClientSocket.Builder();
+    public static <T extends Message> SegmentEventClientSocket.Builder<T> builder() {
+        return new SegmentEventClientSocket.Builder<>();
     }
 
-    public static class Builder {
+    public static class Builder<T extends Message> {
         private String host;
         private int port;
         private String secret;
         private String endPoint;
 
-        public Builder host(String host) {
+        public Builder<T> host(String host) {
             this.host = host;
             return this;
         }
 
-        public Builder port(int port) {
+        public Builder<T> port(int port) {
             this.port = port;
             return this;
         }
 
-        public Builder secret(String secret) {
+        public Builder<T> secret(String secret) {
             this.secret = secret;
             return this;
         }
 
-        public Builder endPoint(String endPoint) {
+        public Builder<T> endPoint(String endPoint) {
             this.endPoint = endPoint;
             return this;
         }
 
-        public SegmentEventClientSocket build() {
-            return new SegmentEventClientSocket(host, port, secret, endPoint);
+        public SegmentEventClientSocket<T> build() {
+            return new SegmentEventClientSocket<>(host, port, secret, endPoint);
         }
     }
 }

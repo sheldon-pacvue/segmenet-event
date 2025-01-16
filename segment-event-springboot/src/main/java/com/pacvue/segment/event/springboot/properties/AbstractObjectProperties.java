@@ -9,7 +9,7 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public abstract class AbstractStoreProperties<T> implements Gson {
+public abstract class AbstractObjectProperties<T> implements Gson {
   private Class<T> clazz;
   private Map<String, Object> properties;
 

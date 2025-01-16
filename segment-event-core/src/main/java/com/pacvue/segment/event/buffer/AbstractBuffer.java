@@ -2,18 +2,14 @@ package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 @Accessors(chain = true)
 public abstract class AbstractBuffer<T extends Message> implements Buffer<T> {
-    @Setter
-    protected String instanceId = UUID.randomUUID().toString();
     protected boolean isAccepted = false;
 
     @NotNull

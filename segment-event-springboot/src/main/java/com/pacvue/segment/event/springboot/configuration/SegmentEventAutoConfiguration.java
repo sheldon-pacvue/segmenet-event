@@ -6,17 +6,16 @@ import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
-import com.pacvue.segment.event.springboot.properties.LoggerProperties;
-import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
+import com.pacvue.segment.event.springboot.properties.LoggerObjectProperties;
+import com.pacvue.segment.event.springboot.properties.impl.RabbitMQProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
-import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
-import com.pacvue.segment.event.buffer.Buffer;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.Log;
+import com.segment.analytics.messages.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -31,7 +30,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 
@@ -65,7 +63,7 @@ public class SegmentEventAutoConfiguration {
     @Bean
     @ConditionalOnBean(Analytics.class)
     @ConditionalOnMissingBean
-    public SegmentEventClientAnalytics segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
+    public SegmentEventClientAnalytics<Message> segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
         return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
     }
 
@@ -76,10 +74,9 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = LoggerProperties.PROPERTIES_PREFIX, name = "clazz", havingValue = "com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties")
-    @ConditionalOnMissingBean(name = "eventLogger")
-    public SegmentEventClientRabbit eventLogger(LoggerProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
-        RabbitMQRemoteStoreProperties config = properties.getConfig();
+    @ConditionalOnMissingBean
+    public SegmentEventClientRabbit<SegmentLogMessage> eventLogger(LoggerObjectProperties<RabbitMQProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+        RabbitMQProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUri(config.getUri());
@@ -100,7 +97,7 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientRabbit eventLogger) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientRabbit<SegmentLogMessage> eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .eventLogger(eventLogger)

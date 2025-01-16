@@ -72,13 +72,13 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
                         return;
                     }
                     List<Message> events = queryData();
-                    log.info("[{}] form db data size: {}", instanceId, events.size());
+                    log.info("form db data size: {}", events.size());
                     if (events.isEmpty()) {
                         return;
                     }
                     consumer.accept(events);
                 } catch (Exception ex) {
-                    log.warn("[{}] resend segment event meet some error", instanceId, ex);
+                    log.warn("resend segment event meet some error", ex);
                 } finally {
                     loopGetData(consumer);
                 }
@@ -123,7 +123,7 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
                 return this;
             }
             statement.execute(createTableSQL);
-            log.debug("[{}] create table success, tableName: {}", instanceId, tableName);
+            log.debug("create table success, tableName: {}", tableName);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -153,7 +153,7 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
             preparedStatement.setString(11, event.reportApp());  // reportApp
 
             boolean result = preparedStatement.execute();
-            log.debug("[{}] data inserted successfully!, result: {}", instanceId, result);
+            log.debug("data inserted successfully!, result: {}", result);
             return result;
         } catch (Exception ex) {
             throw new RuntimeException(ex);

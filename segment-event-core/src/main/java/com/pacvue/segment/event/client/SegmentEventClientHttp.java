@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 @Slf4j
 @Builder
-public class SegmentEventClientHttp implements SegmentEventClient {
+public class SegmentEventClientHttp<T extends Message> implements SegmentEventClient<T> {
     @NonNull
     private final HttpClient httpClient;
     @NonNull
@@ -31,10 +31,10 @@ public class SegmentEventClientHttp implements SegmentEventClient {
     private final Consumer<? super HttpHeaders> headerBuilder;
     @Builder.Default
     @NonNull
-    private final Function<List<Message>, Mono<String>> bodyJsonFactory = Body::generate;
+    private final Function<List<T>, Mono<String>> bodyJsonFactory = Body::generate;
 
     @Override
-    public Mono<Boolean> send(List<Message> events) {
+    public Mono<Boolean> send(List<T> events) {
         return httpClient
                 .headers(headers-> {
                     headers.add(HttpHeaderNames.AUTHORIZATION, secret);
@@ -57,18 +57,23 @@ public class SegmentEventClientHttp implements SegmentEventClient {
                 .retry(retry);
     }
 
+    @Override
+    public String getType() {
+        return "http";
+    }
+
     @Data
     @Accessors(chain = true)
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class Body {
+    public static class Body<T extends Message> {
         public final static String SEND_AT_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
 
-        private List<Message> batch;
+        private List<T> batch;
         private String sendAt;
 
-        public static Mono<String> generate(List<Message> events) {
-            Body body = new Body().setBatch(events).setSendAt(DateUtil.format(new Date(), SEND_AT_FORMAT));
+        public static <T extends Message> Mono<String> generate(List<T> events) {
+            Body<T> body = new Body<T>().setBatch(events).setSendAt(DateUtil.format(new Date(), SEND_AT_FORMAT));
             return Mono.just(gson.toJson(body));
         }
     }

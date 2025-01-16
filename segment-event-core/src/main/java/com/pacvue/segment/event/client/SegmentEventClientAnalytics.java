@@ -11,7 +11,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 @Slf4j
-public class SegmentEventClientAnalytics implements SegmentEventClient {
+public class SegmentEventClientAnalytics<T extends Message> implements SegmentEventClient<T> {
     private final AnalyticsClient client;
 
     SegmentEventClientAnalytics(Analytics analytics) throws NoSuchFieldException, IllegalAccessException {
@@ -21,7 +21,7 @@ public class SegmentEventClientAnalytics implements SegmentEventClient {
     }
 
     @Override
-    public Mono<Boolean> send(List<Message> events) {
+    public Mono<Boolean> send(List<T> events) {
         return Flux.fromIterable(events)
                 .flatMap(event -> {
                     client.enqueue(event);
@@ -30,20 +30,25 @@ public class SegmentEventClientAnalytics implements SegmentEventClient {
                 .all(success -> success);
     }
 
-    public static Builder builder() {
-        return new Builder();
+    @Override
+    public String getType() {
+        return "analytics";
     }
 
-    public static class Builder {
+    public static <T extends Message> Builder<T> builder() {
+        return new Builder<>();
+    }
+
+    public static class Builder<T extends Message> {
         private Analytics analytics;
 
-        public Builder analytics(Analytics analytics) {
+        public Builder<T> analytics(Analytics analytics) {
             this.analytics = analytics;
             return this;
         }
 
-        public SegmentEventClientAnalytics build() throws NoSuchFieldException, IllegalAccessException {
-            return new SegmentEventClientAnalytics(analytics);
+        public SegmentEventClientAnalytics<T> build() throws NoSuchFieldException, IllegalAccessException {
+            return new SegmentEventClientAnalytics<>(analytics);
         }
     }
 }

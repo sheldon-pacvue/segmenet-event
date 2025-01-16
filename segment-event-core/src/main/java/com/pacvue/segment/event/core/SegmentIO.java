@@ -32,13 +32,13 @@ public final class SegmentIO  {
      * 必须： report到segment失败，或者记录发送
      */
     @NonNull
-    private final SegmentEventClient eventLogger;
+    private final SegmentEventClient<SegmentLogMessage> eventLogger;
     /**
      * 必须： 用于本地事件的缓冲，满足条件后批量进行上报
      */
     @Builder.Default
     @NonNull
-    private final Buffer<Message> localBuffer = ReactorLocalBuffer.builder().bufferSize(5).bufferTimeoutSeconds(10).build().setInstanceId("localBuffer");
+    private final Buffer<Message> localBuffer = ReactorLocalBuffer.builder().bufferSize(5).bufferTimeoutSeconds(10).build();
     @Builder.Default
     @NonNull
     private final List<MessageTransformer> messageTransformers = new ArrayList<>();
@@ -63,7 +63,7 @@ public final class SegmentIO  {
         // 本地buffer仓库的数据超出阈值后，进行上报
         localBuffer.accept(this::handleReport);
         log.info("SegmentIO bufferStore started");
-        log.info("SegmentIO reporter client {} started", reporter.getDefaultClientClass().getSimpleName());
+        log.info("SegmentIO reporter client {} started", reporter.getDefaultClientType());
         MetricsCounter metricsCounter = reporter.getMetricsCounter();
         if (null != metricsCounter) {
             log.info("SegmentIO metrics {} started", metricsCounter.getClass().getSimpleName());
@@ -129,7 +129,7 @@ public final class SegmentIO  {
         reporter.reportDefault(events)
                 // 如果上报成功将记录成功
                 .doOnSuccess(b -> {
-                    log.debug("consume success, data: {}, result: {}", events, b);
+                    log.debug("report success, data: {}, result: {}", events, b);
                     Flux.fromIterable(events)
                             .flatMap(event -> tryLog(event, true))
                             .subscribeOn(Schedulers.boundedElastic())
@@ -137,7 +137,7 @@ public final class SegmentIO  {
                 })
                 // 如果上报失败，进入持久化仓库
                 .onErrorResume(throwable -> {
-                    log.warn("batch report failed, switching to single event processing.", throwable);
+                    log.warn("report failed, switching to single event processing.", throwable);
                     return Flux.fromIterable(events)
                             .flatMap(event -> tryLog(event, false))
                             .all(result -> result); // 如果所有结果都为 true，返回 true；如果有一个为 false，返回 false
@@ -157,7 +157,7 @@ public final class SegmentIO  {
                             .build()))
                 )
                 .onErrorResume(ex -> {
-                    log.warn("persist failed, event: {}", event, ex);
+                    log.warn("try log failed, event: {}", event, ex);
                     return Mono.just(Boolean.FALSE);
                 });
     }

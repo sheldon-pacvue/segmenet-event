@@ -1,19 +1,13 @@
-package com.pacvue.segment.event.springboot.properties;
+package com.pacvue.segment.event.springboot.properties.impl;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import static com.pacvue.segment.event.springboot.properties.SegmentEventClientHttpProperties.PROPERTIES_PREFIX;
 
 @Data
 @Accessors(chain = true)
-@ConfigurationProperties(prefix = PROPERTIES_PREFIX)
-public class SegmentEventClientHttpProperties {
-    public final static String PROPERTIES_PREFIX = "segment.event.client.http";
-
+public class HttpProperties {
     // 连接池配置 =============================================
-
+    private String threadName = "segment-event";
     /**
      * 最大连接数
      *

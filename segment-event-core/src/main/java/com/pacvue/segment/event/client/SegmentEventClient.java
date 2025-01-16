@@ -6,6 +6,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-public interface SegmentEventClient extends Gson {
-    Mono<Boolean> send(List<Message> events);
+public interface SegmentEventClient<T extends Message> extends Gson {
+    Mono<Boolean> send(List<T> events);
+
+    String getType();
 }

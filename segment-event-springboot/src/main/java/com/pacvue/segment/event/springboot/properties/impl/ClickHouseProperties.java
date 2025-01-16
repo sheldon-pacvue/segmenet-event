@@ -7,8 +7,7 @@ import java.util.Properties;
 
 @Data
 @Accessors(chain = true)
-public class ClickHouseStoreProperties {
+public class ClickHouseProperties {
     private Properties dataSourceProperties;
-    private String tableName = "SegmentEventsLog";
-    private long loopIntervalMinutes = 1;
+    private String insertSql;
 }

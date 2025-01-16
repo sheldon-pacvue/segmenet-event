@@ -5,7 +5,7 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class RabbitMQRemoteStoreProperties {
+public class RabbitMQProperties {
     private String uri;
     private String exchangeName;
     private String routingKey;

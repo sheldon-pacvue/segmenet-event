@@ -16,14 +16,14 @@ import java.util.Map;
 
 @Builder
 @Slf4j
-public class SegmentEventClientRabbit implements SegmentEventClient {
+public class SegmentEventClientRabbit<T extends Message> implements SegmentEventClient<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;
     private final Channel channel;
 
     @Override
-    public Mono<Boolean> send(List<Message> events) {
+    public Mono<Boolean> send(List<T> events) {
         return Flux.fromIterable(events)
                 .flatMap(event -> {
                     try {
@@ -40,5 +40,10 @@ public class SegmentEventClientRabbit implements SegmentEventClient {
                     }
                 })
                 .all(success -> success);
+    }
+
+    @Override
+    public String getType() {
+        return "rabbit";
     }
 }

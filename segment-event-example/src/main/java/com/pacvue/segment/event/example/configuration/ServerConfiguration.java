@@ -1,5 +1,9 @@
 package com.pacvue.segment.event.example.configuration;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.crypto.digest.DigestUtil;
+import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.*;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
@@ -8,7 +12,11 @@ import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.springboot.properties.*;
-import com.pacvue.segment.event.springboot.properties.impl.RabbitMQRemoteStoreProperties;
+import com.pacvue.segment.event.springboot.properties.client.ClientClickHouseProperties;
+import com.pacvue.segment.event.springboot.properties.client.ClientFileProperties;
+import com.pacvue.segment.event.springboot.properties.client.ClientHttpProperties;
+import com.pacvue.segment.event.springboot.properties.client.ClientSocketProperties;
+import com.pacvue.segment.event.springboot.properties.impl.*;
 import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
 import com.pacvue.segment.event.buffer.Buffer;
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -31,6 +39,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +55,7 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientFile segmentEventClientFile(SegmentEventClientFileProperties properties) {
+    public SegmentEventClientFile<Message> segmentEventClientFile(ClientFileProperties properties) {
         return SegmentEventClientFile.builder()
                 .path(properties.getPath())
                 .fileName(properties.getFileName())
@@ -55,7 +64,7 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientSocket segmentEventClientSocket(SegmentEventClientProperties common, SegmentEventClientSocketProperties properties) {
+    public SegmentEventClientSocket<Message> segmentEventClientSocket(SegmentEventClientProperties common, ClientSocketProperties properties) {
         return SegmentEventClientSocket.builder()
                 .host(properties.getHost())
                 .port(properties.getPort())
@@ -65,9 +74,9 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientHttp segmentEventClientHttp(SegmentEventClientHttpProperties properties) {
+    public SegmentEventClientHttp<Message> segmentEventClientHttp(ClientHttpProperties properties) {
         // 设置 ConnectionProvider 配置
-        ConnectionProvider provider = ConnectionProvider.builder("segment-event-client")
+        ConnectionProvider provider = ConnectionProvider.builder(properties.getThreadName())
                 .maxConnections(properties.getMaxConnections())  // 最大连接数
                 .maxIdleTime(Duration.ofSeconds(properties.getMaxIdleTime()))  // 最大空闲时间
                 .maxLifeTime(Duration.ofSeconds(properties.getMaxLifeTime()))  // 最大生命周期
@@ -92,13 +101,35 @@ public class ServerConfiguration {
     }
 
     @Bean
+    public SegmentEventClientClickHouse<Message> segmentEventClientClickHouse(ClientClickHouseProperties properties) {
+        DruidDataSource druidDataSource = new DruidDataSource();
+        druidDataSource.configFromPropeties(properties.getDataSourceProperties());
+
+        return SegmentEventClientClickHouse.builder()
+                .dataSource(druidDataSource)
+                .insertSql(properties.getInsertSql())
+                .argumentsConverter(event -> new Object[]{
+                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null),
+                        DigestUtil.md5Hex(event.toString()),
+                        event.userId(),
+                        event.type().name(),
+                        event.toString(),
+                        0,
+                        2,
+                        DateUtil.date().getTime(),
+                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).orElse(0L)
+                })
+                .build();
+    }
+
+    @Bean
     @ConditionalOnBean(Analytics.class)
-    public SegmentEventClientAnalytics segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
+    public SegmentEventClientAnalytics<Message> segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
         return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
     }
 
     @Bean
-    public MetricsCounter metricsCounter(MeterRegistry meterRegistry, SegmentEventPrometheusMetricsProperties properties) {
+    public MetricsCounter metricsCounter(MeterRegistry meterRegistry, PrometheusMetricsProperties properties) {
         return SpringPrometheusMetricsCounter.builder(meterRegistry, properties.getName())
                 .tags(properties.getTags())
                 .build();
@@ -109,13 +140,14 @@ public class ServerConfiguration {
         return SegmentEventReporter.builder()
                 .registry(segmentEventClientRegistry)
                 .metricsCounter(metricsCounter)
+                .defaultClientType("clickhouse")
                 .build();
     }
 
 
     @Bean
-    public Buffer<Message> distributedStore(DistributedStoreProperties<RabbitMQRemoteStoreProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
-        RabbitMQRemoteStoreProperties config = properties.getConfig();
+    public Buffer<Message> distributedStore(DistributedObjectProperties<RabbitMQProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+        RabbitMQProperties config = properties.getConfig();
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUri(config.getUri());
@@ -132,12 +164,11 @@ public class ServerConfiguration {
                 .exchangeName(config.getExchangeName())
                 .routingKey(config.getRoutingKey())
                 .queueName(config.getQueueName())
-                .build()
-                .setInstanceId("distributedStore");
+                .build();
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientRabbit eventLogger) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientRabbit<SegmentLogMessage> eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedBuffer(distributedBuffer)

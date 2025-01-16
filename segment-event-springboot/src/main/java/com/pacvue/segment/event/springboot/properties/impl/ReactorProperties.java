@@ -5,7 +5,7 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class ReactorStoreProperties {
+public class ReactorProperties {
     private int bufferMaxSize = 5;
     private int bufferTimeoutSeconds = 10;
 }
