@@ -9,14 +9,14 @@ import java.util.Map;
 
 
 @ToString
-final class AutoValue_SegmentDataBaseMessage extends SegmentLogMessage {
+final class AutoValue_SegmentLogMessage extends SegmentLogMessage {
     private final Message message;
     private final boolean result;
     private final String reportApp;
     private final int operation;
     private final String secret;
 
-    AutoValue_SegmentDataBaseMessage(Message message, boolean result, String reportApp, int operation, String secret) {
+    AutoValue_SegmentLogMessage(Message message, boolean result, String reportApp, int operation, String secret) {
         this.message = message;
         this.result = result;
         this.reportApp = reportApp;

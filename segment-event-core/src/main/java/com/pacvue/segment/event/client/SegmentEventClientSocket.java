@@ -63,11 +63,6 @@ public class SegmentEventClientSocket<T extends Message> implements SegmentEvent
                 });
     }
 
-    @Override
-    public String getType() {
-        return "socket";
-    }
-
     // 启动超时检查定时任务
     private void startTimeoutChecker() {
         scheduler.scheduleAtFixedRate(() -> {

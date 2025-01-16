@@ -41,9 +41,4 @@ public class SegmentEventClientRabbit<T extends Message> implements SegmentEvent
                 })
                 .all(success -> success);
     }
-
-    @Override
-    public String getType() {
-        return "rabbit";
-    }
 }

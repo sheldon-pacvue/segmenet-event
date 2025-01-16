@@ -1,14 +1,18 @@
 package com.pacvue.segment.event.springboot.configuration;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.crypto.digest.DigestUtil;
+import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
+import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
 import com.pacvue.segment.event.client.SegmentEventClientRabbit;
-import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
-import com.pacvue.segment.event.springboot.properties.LoggerObjectProperties;
-import com.pacvue.segment.event.springboot.properties.impl.RabbitMQProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
+import com.pacvue.segment.event.springboot.properties.client.ClientClickHouseProperties;
+import com.pacvue.segment.event.springboot.properties.logger.LoggerRabbitProperties;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -30,6 +34,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 
@@ -69,35 +74,35 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry) {
-        return SegmentEventReporter.builder().registry(segmentEventClientRegistry).build();
+    public SegmentEventReporter segmentEventReporter(SegmentEventClientAnalytics<Message> segmentEventClientAnalytics) {
+        return SegmentEventReporter.builder().client(segmentEventClientAnalytics).build();
     }
 
     @Bean
-    @ConditionalOnMissingBean
-    public SegmentEventClientRabbit<SegmentLogMessage> eventLogger(LoggerObjectProperties<RabbitMQProperties> properties) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
-        RabbitMQProperties config = properties.getConfig();
+    public SegmentEventClientClickHouse<SegmentLogMessage> eventLogger(ClientClickHouseProperties properties) {
+        DruidDataSource druidDataSource = new DruidDataSource();
+        druidDataSource.configFromPropeties(properties.getDataSourceProperties());
 
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setUri(config.getUri());
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-
-        channel.exchangeDeclare(config.getExchangeName(), BuiltinExchangeType.DIRECT, true, false, null);
-        channel.queueDeclare(config.getQueueName(), true, false, false, null);
-        channel.queueBind(config.getQueueName(), config.getExchangeName(), config.getRoutingKey());
-
-        return SegmentEventClientRabbit.<SegmentLogMessage>builder()
-                .channel(channel)
-                .exchangeName(config.getExchangeName())
-                .routingKey(config.getRoutingKey())
-                .queueName(config.getQueueName())
+        return SegmentEventClientClickHouse.<SegmentLogMessage>builder()
+                .dataSource(druidDataSource)
+                .insertSql(properties.getInsertSql())
+                .argumentsConverter(event -> new Object[]{
+                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null),
+                        DigestUtil.md5Hex(event.toString()),
+                        event.userId(),
+                        event.type().name(),
+                        event.toString(),
+                        event.result(),
+                        event.operation(),
+                        DateUtil.date().getTime(),
+                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).orElse(0L)
+                })
                 .build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientRabbit<SegmentLogMessage> eventLogger) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .eventLogger(eventLogger)

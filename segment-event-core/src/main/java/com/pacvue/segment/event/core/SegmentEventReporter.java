@@ -1,8 +1,6 @@
 package com.pacvue.segment.event.core;
 
 import com.pacvue.segment.event.client.SegmentEventClient;
-import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
-import com.pacvue.segment.event.client.SegmentEventClientRegistry;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
@@ -22,14 +20,10 @@ public final class SegmentEventReporter {
     private final MetricsCounter metricsCounter;
 
     @NonNull
-    private final SegmentEventClientRegistry registry;
+    private final SegmentEventClient<Message> client;
 
-    @Builder.Default
-    @Getter
-    private String defaultClientType = "analytics";
 
-    public Mono<Boolean> report(List<Message> events, String type) {
-        SegmentEventClient<Message> client = registry.getClient(type);
+    public Mono<Boolean> report(List<Message> events) {
         return client.send(events)
                 .doOnSuccess(b -> {
                     /*
@@ -41,9 +35,5 @@ public final class SegmentEventReporter {
                     Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.size()));
                 })
                 .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    public Mono<Boolean> reportDefault(List<Message> events) {
-        return report(events, defaultClientType);
     }
 }

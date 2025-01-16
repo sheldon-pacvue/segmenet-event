@@ -63,7 +63,7 @@ public final class SegmentIO  {
         // 本地buffer仓库的数据超出阈值后，进行上报
         localBuffer.accept(this::handleReport);
         log.info("SegmentIO bufferStore started");
-        log.info("SegmentIO reporter client {} started", reporter.getDefaultClientType());
+        log.info("SegmentIO reporter client {} started", reporter.getClient().getClass().getSimpleName());
         MetricsCounter metricsCounter = reporter.getMetricsCounter();
         if (null != metricsCounter) {
             log.info("SegmentIO metrics {} started", metricsCounter.getClass().getSimpleName());
@@ -126,7 +126,7 @@ public final class SegmentIO  {
     }
 
     private void handleReport(List<Message> events) {
-        reporter.reportDefault(events)
+        reporter.report(events)
                 // 如果上报成功将记录成功
                 .doOnSuccess(b -> {
                     log.debug("report success, data: {}, result: {}", events, b);

@@ -38,19 +38,14 @@ public class SegmentEventClientClickHouse<T extends Message> implements SegmentE
                         for (int i = 0; i < arguments.length; i++) {
                             setArgument(preparedStatement, i + 1, arguments[i]);
                         }
-                        boolean result = preparedStatement.execute();
-                        log.debug("data inserted successfully!, result: {}", result);
-                        return Mono.just(result);
+                        preparedStatement.execute();
+                        log.debug("data inserted successfully!");
+                        return Mono.just(Boolean.TRUE);
                     } catch (Exception ex) {
                         return Mono.error(ex);
                     }
                 })
                 .all(success -> success);
-    }
-
-    @Override
-    public String getType() {
-        return "clickhouse";
     }
 
     private void setArgument(PreparedStatement preparedStatement, int paramIndex, Object arg) throws SQLException {

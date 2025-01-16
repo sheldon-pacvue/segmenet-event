@@ -57,11 +57,6 @@ public class SegmentEventClientHttp<T extends Message> implements SegmentEventCl
                 .retry(retry);
     }
 
-    @Override
-    public String getType() {
-        return "http";
-    }
-
     @Data
     @Accessors(chain = true)
     @NoArgsConstructor

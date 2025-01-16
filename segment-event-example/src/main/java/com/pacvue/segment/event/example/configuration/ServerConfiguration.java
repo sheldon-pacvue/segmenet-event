@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -101,34 +100,6 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventClientClickHouse<Message> segmentEventClientClickHouse(ClientClickHouseProperties properties) {
-        DruidDataSource druidDataSource = new DruidDataSource();
-        druidDataSource.configFromPropeties(properties.getDataSourceProperties());
-
-        return SegmentEventClientClickHouse.builder()
-                .dataSource(druidDataSource)
-                .insertSql(properties.getInsertSql())
-                .argumentsConverter(event -> new Object[]{
-                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null),
-                        DigestUtil.md5Hex(event.toString()),
-                        event.userId(),
-                        event.type().name(),
-                        event.toString(),
-                        0,
-                        2,
-                        DateUtil.date().getTime(),
-                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).orElse(0L)
-                })
-                .build();
-    }
-
-    @Bean
-    @ConditionalOnBean(Analytics.class)
-    public SegmentEventClientAnalytics<Message> segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
-        return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
-    }
-
-    @Bean
     public MetricsCounter metricsCounter(MeterRegistry meterRegistry, PrometheusMetricsProperties properties) {
         return SpringPrometheusMetricsCounter.builder(meterRegistry, properties.getName())
                 .tags(properties.getTags())
@@ -136,11 +107,10 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientRegistry segmentEventClientRegistry, MetricsCounter metricsCounter) {
+    public SegmentEventReporter segmentEventReporter(SegmentEventClientSocket<Message> client, MetricsCounter metricsCounter) {
         return SegmentEventReporter.builder()
-                .registry(segmentEventClientRegistry)
+                .client(client)
                 .metricsCounter(metricsCounter)
-                .defaultClientType("clickhouse")
                 .build();
     }
 
@@ -168,7 +138,7 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientRabbit<SegmentLogMessage> eventLogger) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedBuffer(distributedBuffer)

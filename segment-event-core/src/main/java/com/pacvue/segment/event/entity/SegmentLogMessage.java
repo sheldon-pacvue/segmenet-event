@@ -24,7 +24,7 @@ public abstract class SegmentLogMessage implements Message, Serializable {
     public abstract String secret();
 
     public static Builder builder() {
-        return new AutoValue_SegmentDataBaseMessage.Builder();
+        return new AutoValue_SegmentLogMessage.Builder();
     }
 
     public Builder toBuilder() {
@@ -65,7 +65,7 @@ public abstract class SegmentLogMessage implements Message, Serializable {
         }
 
         public SegmentLogMessage build() {
-            return new AutoValue_SegmentDataBaseMessage(message, result, reportApp, operation, secret);
+            return new AutoValue_SegmentLogMessage(message, result, reportApp, operation, secret);
         }
     }
 }

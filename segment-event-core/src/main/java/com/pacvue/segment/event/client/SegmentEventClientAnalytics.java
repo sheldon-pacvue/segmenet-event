@@ -30,11 +30,6 @@ public class SegmentEventClientAnalytics<T extends Message> implements SegmentEv
                 .all(success -> success);
     }
 
-    @Override
-    public String getType() {
-        return "analytics";
-    }
-
     public static <T extends Message> Builder<T> builder() {
         return new Builder<>();
     }
