@@ -7,7 +7,7 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class FileProperties {
     private String path;
-    private String fileName;
+    private String fileName = "analytics.log";
     // 默认文件大小为100Mb
     private long maxFileSizeMb = 100;
 }
