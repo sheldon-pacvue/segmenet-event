@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: segment-event-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/your_database
+    username: your_username
+    password: your_password
+    driver-class-name: com.clickhouse.jdbc.ClickHouseDriver

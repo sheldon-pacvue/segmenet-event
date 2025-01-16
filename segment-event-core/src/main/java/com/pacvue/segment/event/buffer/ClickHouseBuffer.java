@@ -23,7 +23,7 @@ import static com.pacvue.segment.event.entity.SegmentLogMessage.LOG_OPERATION_SE
 
 @Builder
 @Slf4j
-public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffer<T> {
+public class ClickHouseBuffer<T extends Message> extends AbstractBuffer<T> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final DataSource dataSource;
@@ -107,9 +107,7 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
                    `result` UInt8,
                    `operation` UInt8,
                    `createdAt` Int32,
-                   `eventTime` Int32,
-                   `secret` String,
-                   `reportApp` String
+                   `eventTime` Int32
                )
                ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/%s', '{replica}')
                PARTITION BY toYYYYMM(eventDate)
@@ -133,8 +131,8 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
     private boolean insertData(T event) {
         // 插入的SQL语句
         String insertSQL = """
-            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime, secret, reportApp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO %s (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.formatted(tableName);  // 用表名替换占位符
 
         try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSQL)) {
@@ -145,12 +143,10 @@ public class ClickHouseBuffer<T extends SegmentLogMessage> extends AbstractBuffe
             preparedStatement.setString(3, event.userId());  // userId
             preparedStatement.setString(4, event.type().name());  // type
             preparedStatement.setString(5, json);  // message
-            preparedStatement.setBoolean(6, event.result());  // result (UInt8)
-            preparedStatement.setInt(7, event.operation());  // operation
+            preparedStatement.setBoolean(6, false);  // result (UInt8)
+            preparedStatement.setInt(7, LOG_OPERATION_SEND_TO_SEGMENT);  // operation
             preparedStatement.setLong(8, DateUtil.date().toTimestamp().getTime());  // createdAt
             preparedStatement.setLong(9, Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toTimestamp).map(Timestamp::getTime).orElse(0L));  // eventTime
-            preparedStatement.setString(10, event.secret());  // secret
-            preparedStatement.setString(11, event.reportApp());  // reportApp
 
             boolean result = preparedStatement.execute();
             log.debug("data inserted successfully!, result: {}", result);

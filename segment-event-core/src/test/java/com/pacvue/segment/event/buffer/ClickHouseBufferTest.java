@@ -2,6 +2,7 @@ package com.pacvue.segment.event.buffer;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
+import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 class ClickHouseBufferTest {
-    private static ClickHouseBuffer<SegmentLogMessage> store;
+    private static ClickHouseBuffer<Message> store;
 
     @BeforeAll
     static void setUp() throws IOException {

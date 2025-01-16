@@ -3,6 +3,7 @@ package com.pacvue.segment.event.example.controller;
 import com.pacvue.segment.event.client.SegmentEventClientHttp;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.example.generator.TrackSimpleGenerator;
+import com.segment.analytics.messages.Message;
 import com.segment.analytics.messages.TrackMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,5 +105,12 @@ public class ExampleController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Batch is too big");
         }
         return Mono.just(body.getBatch().size());
+    }
+
+    @PostMapping("/v1/segment/event/report")
+    public Mono<Integer> v1Import(@RequestBody Message message) {
+        log.info("import: {}", message);
+
+        return Mono.just(1);
     }
 }

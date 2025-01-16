@@ -1,71 +1,78 @@
 package com.pacvue.segment.event.entity;
 
-import com.google.auto.value.AutoValue;
-import com.segment.analytics.gson.AutoGson;
-import com.segment.analytics.messages.*;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.segment.analytics.messages.Message;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.io.Serializable;
+import java.util.Date;
+import java.util.Map;
 
-
-@AutoValue
-@AutoGson
-public abstract class SegmentLogMessage implements Message, Serializable {
-    public final static int LOG_OPERATION_SEND_TO_SQS = 1;
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Accessors(chain = true, fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY) // 自动检测字段
+public final class SegmentLogMessage implements Message {
     public final static int LOG_OPERATION_SEND_TO_SEGMENT = 2;
 
-    public abstract Message message();
+    private Message message;
+    private boolean result;
+    private String reportApp;
+    private int operation;
+    private String secret;
 
-    public abstract boolean result();
-
-    public abstract String reportApp();
-
-    public abstract int operation();
-
-    public abstract String secret();
-
-    public static Builder builder() {
-        return new AutoValue_SegmentLogMessage.Builder();
+    @NotNull
+    @Override
+    public Type type() {
+        return message.type();
     }
 
-    public Builder toBuilder() {
-        return builder().message(message()).result(result()).operation(operation()).reportApp(reportApp()).secret(secret());
+    @NotNull
+    @Override
+    public String messageId() {
+        return message.messageId();
     }
 
+    @Nullable
+    @Override
+    public Date sentAt() {
+        return message.sentAt();
+    }
 
-    public static class Builder {
-        private Message message;
-        private boolean result;
-        private String reportApp;
-        private int operation = LOG_OPERATION_SEND_TO_SEGMENT;
-        private String secret;
+    @NotNull
+    @Override
+    public Date timestamp() {
+        return message.timestamp();
+    }
 
-        public Builder message(Message message) {
-            this.message = message;
-            return this;
-        }
+    @Nullable
+    @Override
+    public Map<String, ?> context() {
+        return message.context();
+    }
 
-        public Builder result(boolean result) {
-            this.result = result;
-            return this;
-        }
+    @Nullable
+    @Override
+    public String anonymousId() {
+        return message.anonymousId();
+    }
 
-        public Builder reportApp(String reportApp) {
-            this.reportApp = reportApp;
-            return this;
-        }
+    @Nullable
+    @Override
+    public String userId() {
+        return message.userId();
+    }
 
-        public Builder operation(int operation) {
-            this.operation = operation;
-            return this;
-        }
-
-        public Builder secret(String secret) {
-            this.secret = secret;
-            return this;
-        }
-
-        public SegmentLogMessage build() {
-            return new AutoValue_SegmentLogMessage(message, result, reportApp, operation, secret);
-        }
+    @Nullable
+    @Override
+    public Map<String, Object> integrations() {
+        return message.integrations();
     }
 }
