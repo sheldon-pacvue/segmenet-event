@@ -1,13 +1,11 @@
 package com.pacvue.segment.event.springboot.properties.impl;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
-@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class HttpProperties extends InstanceProperties {
+public class HttpProperties {
     // 连接池配置 =============================================
     private String threadName = "segment-event";
     /**

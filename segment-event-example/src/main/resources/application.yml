@@ -6,11 +6,6 @@ spring:
 segment:
   event:
     logger:
-      rabbit:
-        uri: amqp://deploy:deploy@localhost:5678
-        exchangeName: amq.direct
-        routingKey: segment-event-example2
-        queueName: segment-event-example2
       clickhouse:
         data-source-properties:
           druid:
@@ -20,10 +15,12 @@ segment:
             password: default
             validationQuery: SELECT 1
             testWhileIdle: true
+        insertSql: |
+          INSERT INTO SegmentEventLog (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     store:
       distributed:
-        clazz: com.pacvue.segment.event.springboot.properties.impl.RabbitMQProperties
-        properties:
+        rabbit:
           uri: amqp://deploy:deploy@localhost:5678
           exchangeName: amq.direct
           routingKey: segment-event-example
@@ -40,20 +37,8 @@ segment:
         end-point: "/v1/import"
         host: "localhost"
         port: 9090
-      clickhouse:
-        data-source-properties:
-          druid:
-            driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
-            url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
-            username: default
-            password: default
-            validationQuery: SELECT 1
-            testWhileIdle: true
-        insertSql: |
-          INSERT INTO SegmentEventLog (eventDate, hash, userId, type, message, result, operation, createdAt, eventTime)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
-    app-id: segment-event-example
+    app-id: ${spring.application.name}
 management:
   endpoints:
     web:

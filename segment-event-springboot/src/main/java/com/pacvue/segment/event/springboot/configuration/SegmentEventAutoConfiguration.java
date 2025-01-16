@@ -6,17 +6,12 @@ import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
-import com.pacvue.segment.event.client.SegmentEventClientRabbit;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentLogMessage;
+import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
-import com.pacvue.segment.event.springboot.properties.client.ClientClickHouseProperties;
-import com.pacvue.segment.event.springboot.properties.logger.LoggerRabbitProperties;
-import com.rabbitmq.client.BuiltinExchangeType;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.Log;
 import com.segment.analytics.messages.Message;
@@ -30,13 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
-import java.util.concurrent.TimeoutException;
-
 
 @Configuration
 @ComponentScan(basePackages = "com.pacvue")
@@ -79,13 +68,14 @@ public class SegmentEventAutoConfiguration {
     }
 
     @Bean
-    public SegmentEventClientClickHouse<SegmentLogMessage> eventLogger(ClientClickHouseProperties properties) {
+    public SegmentEventClientClickHouse<SegmentLogMessage> eventLogger(LoggerProperties properties) {
+        ClickHouseProperties clickhouse = properties.getClickhouse();
         DruidDataSource druidDataSource = new DruidDataSource();
-        druidDataSource.configFromPropeties(properties.getDataSourceProperties());
+        druidDataSource.configFromPropeties(clickhouse.getDataSourceProperties());
 
         return SegmentEventClientClickHouse.<SegmentLogMessage>builder()
                 .dataSource(druidDataSource)
-                .insertSql(properties.getInsertSql())
+                .insertSql(clickhouse.getInsertSql())
                 .argumentsConverter(event -> new Object[]{
                         Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null),
                         DigestUtil.md5Hex(event.toString()),

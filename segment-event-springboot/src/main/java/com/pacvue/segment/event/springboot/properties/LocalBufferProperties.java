@@ -1,10 +1,13 @@
 package com.pacvue.segment.event.springboot.properties;
 
+import com.pacvue.segment.event.springboot.properties.impl.ReactorProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.pacvue.segment.event.springboot.properties.LocalBufferObjectProperties.PROPERTIES_PREFIX;
+import static com.pacvue.segment.event.springboot.properties.LocalBufferProperties.PROPERTIES_PREFIX;
 
 @ConfigurationProperties(prefix = PROPERTIES_PREFIX)
-public class LocalBufferObjectProperties<T> extends AbstractObjectProperties<T> {
+public class LocalBufferProperties {
     public final static String PROPERTIES_PREFIX = "segment.event.store.local";
+
+    private ReactorProperties reactor;
 }
