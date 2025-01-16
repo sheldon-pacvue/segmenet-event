@@ -4,7 +4,7 @@
 
   <parent>
     <groupId>com.pacvue</groupId>
-    <artifactId>segment-event-client</artifactId>
+    <artifactId>segment-event</artifactId>
     <version>${revision}</version>
   </parent>
 
