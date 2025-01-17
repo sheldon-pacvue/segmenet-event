@@ -12,7 +12,7 @@ import com.pacvue.segment.event.springboot.properties.*;
 import com.pacvue.segment.event.springboot.properties.impl.*;
 import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
 import com.pacvue.segment.event.buffer.Buffer;
-import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
+import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;

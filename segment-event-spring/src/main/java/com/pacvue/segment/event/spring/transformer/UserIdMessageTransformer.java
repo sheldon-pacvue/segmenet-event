@@ -1,15 +1,11 @@
 package com.pacvue.segment.event.spring.transformer;
 
 import com.pacvue.segment.event.spring.filter.ServletRequestHolder;
-import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
-import com.pacvue.segment.event.transformer.ReactorMessageTransformerAdapter;
+import com.pacvue.segment.event.extend.ReactorMessageTransformer;
+import com.pacvue.segment.event.extend.ReactorMessageTransformerAdapter;
 import com.segment.analytics.MessageTransformer;
 import com.segment.analytics.messages.MessageBuilder;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
-import reactor.util.context.ContextView;
 
-import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 
 /**

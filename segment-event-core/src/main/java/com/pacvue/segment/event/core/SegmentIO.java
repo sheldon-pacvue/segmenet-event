@@ -6,8 +6,8 @@ import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
 import com.pacvue.segment.event.buffer.Buffer;
-import com.pacvue.segment.event.transformer.ReactorMessageInterceptor;
-import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
+import com.pacvue.segment.event.extend.ReactorMessageInterceptor;
+import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.segment.analytics.messages.*;
 import lombok.Builder;
 import lombok.NonNull;
@@ -78,7 +78,7 @@ public final class SegmentIO  {
         Optional.ofNullable(distributedBuffer).ifPresent(Buffer::shutdown);
         // 本地buffer仓库事件清理
         localBuffer.shutdown();
-        reporter.shutdown();
+        reporter.flush();
         log.info("SegmentIO shutdown");
     }
 

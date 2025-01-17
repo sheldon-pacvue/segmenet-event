@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.transformer;
+package com.pacvue.segment.event.extend;
 
 import com.segment.analytics.MessageInterceptor;
 import com.segment.analytics.messages.Message;

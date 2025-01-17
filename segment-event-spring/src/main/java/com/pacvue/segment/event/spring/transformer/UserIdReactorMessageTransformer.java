@@ -1,6 +1,6 @@
 package com.pacvue.segment.event.spring.transformer;
 
-import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
+import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.segment.analytics.messages.MessageBuilder;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
