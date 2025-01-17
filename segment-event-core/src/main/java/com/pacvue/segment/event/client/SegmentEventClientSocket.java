@@ -64,7 +64,7 @@ public class SegmentEventClientSocket<T extends Message> implements SegmentEvent
     }
 
     @Override
-    public void shutdown() {
+    public void flush() {
 
     }
 

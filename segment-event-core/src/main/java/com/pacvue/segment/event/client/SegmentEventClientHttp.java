@@ -58,7 +58,7 @@ public class SegmentEventClientHttp<T extends Message> implements SegmentEventCl
     }
 
     @Override
-    public void shutdown() {
+    public void flush() {
 
     }
 

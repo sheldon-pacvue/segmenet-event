@@ -48,7 +48,7 @@ public class SegmentEventClientClickHouse<T extends Message> implements SegmentE
     }
 
     @Override
-    public void shutdown() {
+    public void flush() {
 
     }
 

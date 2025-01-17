@@ -42,7 +42,7 @@ public class SegmentEventClientRabbit<T extends Message> implements SegmentEvent
     }
 
     @Override
-    public void shutdown() {
+    public void flush() {
 
     }
 }

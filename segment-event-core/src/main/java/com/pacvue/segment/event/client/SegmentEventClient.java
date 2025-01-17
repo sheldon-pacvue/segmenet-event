@@ -9,5 +9,5 @@ import java.util.List;
 public interface SegmentEventClient<T extends Message> extends GsonConstant {
     Mono<Boolean> send(List<T> events);
 
-    void shutdown();
+    void flush();
 }

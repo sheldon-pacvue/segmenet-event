@@ -31,7 +31,7 @@ public class SegmentEventClientAnalytics<T extends Message> implements SegmentEv
     }
 
     @Override
-    public void shutdown() {
+    public void flush() {
         client.shutdown();
     }
 
