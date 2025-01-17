@@ -78,6 +78,7 @@ public final class SegmentIO  {
         Optional.ofNullable(distributedBuffer).ifPresent(Buffer::shutdown);
         // 本地buffer仓库事件清理
         localBuffer.shutdown();
+        reporter.shutdown();
         log.info("SegmentIO shutdown");
     }
 

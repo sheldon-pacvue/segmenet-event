@@ -57,6 +57,11 @@ public class SegmentEventClientHttp<T extends Message> implements SegmentEventCl
                 .retry(retry);
     }
 
+    @Override
+    public void shutdown() {
+
+    }
+
     @Data
     @Accessors(chain = true)
     @NoArgsConstructor

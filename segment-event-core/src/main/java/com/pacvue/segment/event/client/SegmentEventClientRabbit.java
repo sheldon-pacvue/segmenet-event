@@ -1,6 +1,5 @@
 package com.pacvue.segment.event.client;
 
-import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.segment.analytics.messages.Message;
@@ -40,5 +39,10 @@ public class SegmentEventClientRabbit<T extends Message> implements SegmentEvent
                     }
                 })
                 .all(success -> success);
+    }
+
+    @Override
+    public void shutdown() {
+
     }
 }

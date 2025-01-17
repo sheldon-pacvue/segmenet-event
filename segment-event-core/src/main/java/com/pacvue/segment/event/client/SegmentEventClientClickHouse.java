@@ -1,6 +1,5 @@
 package com.pacvue.segment.event.client;
 
-import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.NonNull;
@@ -46,6 +45,11 @@ public class SegmentEventClientClickHouse<T extends Message> implements SegmentE
                     }
                 })
                 .all(success -> success);
+    }
+
+    @Override
+    public void shutdown() {
+
     }
 
     private void setArgument(PreparedStatement preparedStatement, int paramIndex, Object arg) throws SQLException {

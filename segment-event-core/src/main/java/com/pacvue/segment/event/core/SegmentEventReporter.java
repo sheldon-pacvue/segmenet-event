@@ -36,4 +36,8 @@ public final class SegmentEventReporter {
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }
+
+    public void shutdown() {
+        client.shutdown();
+    }
 }
