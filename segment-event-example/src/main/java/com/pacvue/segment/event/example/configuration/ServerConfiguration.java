@@ -7,10 +7,12 @@ import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.filter.ReactorRequestHolderFilter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
+import com.pacvue.segment.event.spring.transformer.UserIdReactorMessageTransformer;
 import com.pacvue.segment.event.springboot.properties.*;
 import com.pacvue.segment.event.springboot.properties.impl.*;
 import com.pacvue.segment.event.buffer.RabbitMQDistributedBuffer;
 import com.pacvue.segment.event.buffer.Buffer;
+import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -30,6 +32,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -131,13 +134,19 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger) {
+    public UserIdReactorMessageTransformer userIdReactorMessageTransformer() {
+        return new UserIdReactorMessageTransformer("X-User-ID");
+    }
+
+    @Bean
+    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger, List<ReactorMessageTransformer> transformers) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .distributedBuffer(distributedBuffer)
                 .eventLogger(eventLogger)
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
+                .messageTransformers(transformers)
                 .build();
     }
 }

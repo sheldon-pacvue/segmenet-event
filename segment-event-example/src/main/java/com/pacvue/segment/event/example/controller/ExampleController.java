@@ -47,7 +47,7 @@ public class ExampleController {
             segmentIO.track(() -> {
                 String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
                 log.info("userId: {}", userId);
-                return Mono.just(TrackMessage.builder("hello-right").userId(userId).anonymousId(userId).sentAt(new Date()));
+                return Mono.just(TrackMessage.builder("hello-right").anonymousId(userId).sentAt(new Date()));
             });
             return Mono.just("right");
         });
@@ -64,7 +64,7 @@ public class ExampleController {
             ServerWebExchange context = ctx.get(ServerWebExchange.class);
             String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
             log.info("userId: {}", userId);
-            return Mono.just(TrackMessage.builder("hello-right2").userId(userId).anonymousId(userId).sentAt(new Date()));
+            return Mono.just(TrackMessage.builder("hello-right2").anonymousId(userId).sentAt(new Date()));
         })))
         .flatMap(b -> Mono.just(b.toString()));
     }

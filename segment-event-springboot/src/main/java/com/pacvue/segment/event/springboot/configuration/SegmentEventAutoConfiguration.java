@@ -12,6 +12,8 @@ import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
 import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
+import com.pacvue.segment.event.transformer.ReactorMessageInterceptor;
+import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
 import com.segment.analytics.Analytics;
 import com.segment.analytics.Log;
 import com.segment.analytics.messages.Message;
@@ -26,6 +28,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
 import java.util.Optional;
 
 @Configuration
@@ -115,12 +118,18 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties,
+                               SegmentEventReporter segmentEventReporter,
+                               SegmentEventClientClickHouse<SegmentLogMessage> eventLogger,
+                               List<ReactorMessageTransformer> transformers,
+                               List<ReactorMessageInterceptor> interceptors) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
                 .eventLogger(eventLogger)
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())
+                .messageTransformers(transformers)
+                .messageInterceptors(interceptors)
                 .build();
     }
 }

@@ -6,8 +6,8 @@ import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
 import com.pacvue.segment.event.buffer.Buffer;
-import com.segment.analytics.MessageInterceptor;
-import com.segment.analytics.MessageTransformer;
+import com.pacvue.segment.event.transformer.ReactorMessageInterceptor;
+import com.pacvue.segment.event.transformer.ReactorMessageTransformer;
 import com.segment.analytics.messages.*;
 import lombok.Builder;
 import lombok.NonNull;
@@ -41,10 +41,10 @@ public final class SegmentIO  {
     private final Buffer<Message> localBuffer = ReactorLocalBuffer.builder().bufferSize(5).bufferTimeoutSeconds(10).build();
     @Builder.Default
     @NonNull
-    private final List<MessageTransformer> messageTransformers = new ArrayList<>();
+    private final List<ReactorMessageTransformer> messageTransformers = new ArrayList<>();
     @Builder.Default
     @NonNull
-    private final List<MessageInterceptor> messageInterceptors = new ArrayList<>();
+    private final List<ReactorMessageInterceptor> messageInterceptors = new ArrayList<>();
     @NonNull
     private final String secret;
     @NonNull
@@ -109,7 +109,7 @@ public final class SegmentIO  {
 
     public <T extends Message, V extends MessageBuilder<T, V>> Mono<Boolean> deliverReact(SegmentEventGenerator<T, V> generator) {
         return generator.generate()
-                .mapNotNull(this::buildMessage)
+                .flatMap(this::buildMessage)
                 .flatMap(event -> {
                     // 尝试分布式贮藏
                     return Mono.defer(() -> distributedBuffer.commit(event))
@@ -163,22 +163,30 @@ public final class SegmentIO  {
                 });
     }
 
-    private <V extends MessageBuilder<?, ?>> Message buildMessage(V builder) {
-        for (MessageTransformer messageTransformer : messageTransformers) {
-            boolean shouldContinue = messageTransformer.transform(builder);
-            if (!shouldContinue) {
-                log.info("Transformer {} Skipping message {}.", messageTransformer.getClass(), builder);
-                return null;
-            }
-        }
-        Message message = builder.build();
-        for (MessageInterceptor messageInterceptor : messageInterceptors) {
-            message = messageInterceptor.intercept(message);
-            if (message == null) {
-                log.info("Interceptor {} Skipping message {}.", messageInterceptor.getClass(), builder);
-                return null;
-            }
-        }
-        return message;
+
+    private <V extends MessageBuilder<?, ?>> Mono<Message> buildMessage(V builder) {
+        return Mono.deferContextual(ctx -> Flux.fromIterable(messageTransformers)
+                .flatMap(transformer -> transformer.transform(builder, ctx)
+                        .onErrorResume(ex -> {
+                            log.error("Transformer {} failed, skipping message {}.", transformer.getClass(), builder, ex);
+                            return Mono.just(Boolean.FALSE);
+                        }))
+                .defaultIfEmpty(Boolean.FALSE) // 确保 Transformer 失败时返回 FALSE
+                .all(Boolean::booleanValue) // 确保所有 Transformer 都返回 true
+                .flatMap(allSuccess -> {
+                    if (!allSuccess) {
+                        log.info("Skipping message {} due to transformer failure.", builder);
+                        return Mono.empty();
+                    }
+                    Message message = builder.build();
+                    return Flux.fromIterable(messageInterceptors)
+                            .flatMap(interceptor -> interceptor.intercept(message, ctx))
+                            .last(message) // 取最后一个 Message，如果所有 interceptor 都成功
+                            .switchIfEmpty(Mono.error(new RuntimeException("No valid message after interception."))) // 为空时抛出异常
+                            .onErrorResume(ex -> {
+                                log.error("Interceptor failed, skipping message {}.", builder, ex);
+                                return Mono.empty();
+                            });
+                }));
     }
 }

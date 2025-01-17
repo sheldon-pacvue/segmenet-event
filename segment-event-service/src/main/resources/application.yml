@@ -6,10 +6,15 @@ spring:
     username: your_username
     password: your_password
     driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+  rabbitmq:
+    host: localhost   # RabbitMQ 服务器地址（本地）
+    port: 15672        # 默认端口
+    username: deploy   # 默认用户
+    password: deploy   # 默认密码
+    virtual-host: "/" # 默认虚拟主机
 server:
   servlet:
     context-path: /api
   context-path: /segment
   webflux:
     base-path: /api
-
