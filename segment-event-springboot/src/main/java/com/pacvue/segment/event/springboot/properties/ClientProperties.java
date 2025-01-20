@@ -19,4 +19,5 @@ public class ClientProperties {
   public HttpProperties http;
   public RabbitMQProperties rabbit;
   public SocketProperties socket;
+  public AmazonSQSProperties amazonSqs;
 }

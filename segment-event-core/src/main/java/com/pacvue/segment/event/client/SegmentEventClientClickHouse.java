@@ -8,6 +8,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -30,21 +31,27 @@ public class SegmentEventClientClickHouse<T extends Message> implements SegmentE
 
     @Override
     public Mono<Boolean> send(List<T> events) {
-        return Flux.fromIterable(events)
-                .flatMap(event -> {
-                    try (PreparedStatement preparedStatement = dataSource.getConnection().prepareStatement(insertSql)) {
-                        Object[] arguments = argumentsConverter.apply(event);
-                        for (int i = 0; i < arguments.length; i++) {
-                            setArgument(preparedStatement, i + 1, arguments[i]);
-                        }
-                        preparedStatement.execute();
-                        log.debug("data inserted successfully!");
-                        return Mono.just(Boolean.TRUE);
-                    } catch (Exception ex) {
-                        return Mono.error(ex);
+        return Mono.fromCallable(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement(insertSql)) {
+
+                for (T event : events) {
+                    Object[] arguments = argumentsConverter.apply(event);
+                    for (int i = 0; i < arguments.length; i++) {
+                        setArgument(preparedStatement, i + 1, arguments[i]);
                     }
-                })
-                .all(success -> success);
+                    preparedStatement.addBatch(); // 将 SQL 语句添加到批次
+                }
+
+                int[] result = preparedStatement.executeBatch(); // 一次性批量执行
+                log.debug("Batch insert completed: {} records inserted", result.length);
+
+                return result.length == events.size(); // 确保所有记录都成功插入
+            } catch (Exception ex) {
+                log.error("Batch insert failed", ex);
+                return Boolean.FALSE;
+            }
+        });
     }
 
     @Override
