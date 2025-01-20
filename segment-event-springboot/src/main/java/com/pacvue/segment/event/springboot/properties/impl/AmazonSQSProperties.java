@@ -7,6 +7,5 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class AmazonSQSProperties {
     private String region;
-    private String accessKey;
-    private String secretKey;
+    private String queueUrl;
 }
