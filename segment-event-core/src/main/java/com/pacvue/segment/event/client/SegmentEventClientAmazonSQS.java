@@ -4,7 +4,9 @@ import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
@@ -18,13 +20,21 @@ public class SegmentEventClientAmazonSQS<T extends Message> implements SegmentEv
     private final SqsAsyncClient client;
     private final String queueUrl;
 
-    public SegmentEventClientAmazonSQS(String region, String queueUrl) {
+    /**
+     * private string $sqsUrl,
+     * private string $sqsSecret,
+     * private string $sqsKey,
+     */
+    public SegmentEventClientAmazonSQS(String region, String queueUrl, String awsAccessKey, String awsSecretKey) {
         this.client = SqsAsyncClient.builder()
                 .region(Region.of(region))  // 替换为你的AWS区域
-                .credentialsProvider(DefaultCredentialsProvider.create())
+                .credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(awsAccessKey, awsSecretKey)
+                ))
                 .build();
         this.queueUrl = queueUrl;
     }
+
 
 
 
