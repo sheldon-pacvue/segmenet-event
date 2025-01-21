@@ -21,7 +21,7 @@ public class NoActionBuffer<T extends Message> extends AbstractBuffer<T> {
 
     @NotNull
     @Override
-    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
+    protected StopAccept doAccept(@NotNull Consumer<List<T>> consumer) {
        throw new RuntimeException("don't allow accept");
     }
 

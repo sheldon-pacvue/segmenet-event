@@ -139,10 +139,12 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, Buffer<Message> distributedBuffer, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger, List<ReactorMessageTransformer> transformers) {
+    public SegmentIO segmentIO(SegmentEventClientProperties properties,
+                               SegmentEventReporter segmentEventReporter,
+                               SegmentEventClientClickHouse<SegmentLogMessage> eventLogger,
+                               List<ReactorMessageTransformer> transformers) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .distributedBuffer(distributedBuffer)
                 .eventLogger(eventLogger)
                 .secret(properties.getSecret())
                 .reportApp(properties.getAppId())

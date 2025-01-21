@@ -17,7 +17,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Slf4j
-public class SegmentEventClientFile<T extends Message> implements SegmentEventClient<T> {
+public class SegmentEventClientFile<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientFile<T>> {
     private static final long FILE_SIZE_UNIT = 1024 * 1024L; // MB
     private File file;
     private final String path;

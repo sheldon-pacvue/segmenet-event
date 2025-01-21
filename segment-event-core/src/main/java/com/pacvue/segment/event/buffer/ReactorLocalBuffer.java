@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 @Slf4j
 public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
     @Builder.Default
-    private Sinks.Many<Message> sink = Sinks.many().multicast().onBackpressureBuffer();
+    private Sinks.Many<T> sink = Sinks.many().multicast().onBackpressureBuffer();
     @Builder.Default
     private final int bufferSize = 5;
     @Builder.Default
@@ -36,7 +36,7 @@ public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
 
     @NotNull
     @Override
-    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
+    protected StopAccept doAccept(@NotNull Consumer<List<T>> consumer) {
         Disposable accepted = sink.asFlux().bufferTimeout(bufferSize, Duration.ofSeconds(bufferTimeoutSeconds)).subscribe(events -> {
                             log.debug("event consume start, events：{}", events);
                             consumer.accept(events);

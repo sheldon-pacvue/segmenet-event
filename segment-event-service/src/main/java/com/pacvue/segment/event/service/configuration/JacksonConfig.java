@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import java.io.IOException;
 
 @Configuration
-public class JsonConfig {
+public class JacksonConfig {
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();

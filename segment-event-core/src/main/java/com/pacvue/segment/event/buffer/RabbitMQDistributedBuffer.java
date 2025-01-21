@@ -53,7 +53,7 @@ public class RabbitMQDistributedBuffer<T extends Message> extends AbstractBuffer
     // 订阅消息
     @NotNull
     @Override
-    protected StopAccept doAccept(@NotNull Consumer<List<Message>> consumer) {
+    protected StopAccept doAccept(@NotNull Consumer<List<T>> consumer) {
         try {
             String consumerTag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
                 @SneakyThrows
@@ -64,14 +64,18 @@ public class RabbitMQDistributedBuffer<T extends Message> extends AbstractBuffer
                     String type = properties.getHeaders().get("type").toString();
                     Class<?> clazz = Class.forName(type);
                     Type resultType = TypeToken.get(clazz).getType();
-                    Message event = gson.fromJson(new String(body, StandardCharsets.UTF_8), resultType);
+                    T event = gson.fromJson(new String(body, StandardCharsets.UTF_8), resultType);
 
-                    List<Message> eventList = List.of(event);
+                    List<T> eventList = List.of(event);
                     consumer.accept(eventList);
                 }
             });
             return () -> {
-                channel.basicCancel(consumerTag);
+                try {
+                    channel.basicCancel(consumerTag);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             };
         } catch (IOException e) {
             throw new RuntimeException("Subscribing failed", e);

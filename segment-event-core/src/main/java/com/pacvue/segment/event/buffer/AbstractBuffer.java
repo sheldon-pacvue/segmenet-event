@@ -14,7 +14,7 @@ public abstract class AbstractBuffer<T extends Message> implements Buffer<T> {
 
     @NotNull
     @Override
-    public final StopAccept accept(@NonNull Consumer<List<Message>> consumer) {
+    public final StopAccept accept(@NonNull Consumer<List<T>> consumer) {
         if (isAccepted) {
             throw new IllegalStateException("Already accepted a consumer.");
         }
@@ -30,5 +30,5 @@ public abstract class AbstractBuffer<T extends Message> implements Buffer<T> {
      * 提供子类实现的接受逻辑
      */
     @NonNull
-    protected abstract StopAccept doAccept(@NonNull Consumer<List<Message>> consumer);
+    protected abstract StopAccept doAccept(@NonNull Consumer<List<T>> consumer);
 }

@@ -21,8 +21,8 @@ public class SegmentEventClientAnalytics<T extends Message> implements SegmentEv
     }
 
     @Override
-    public Mono<Boolean> send(List<T> events) {
-        return Flux.fromIterable(events)
+    public Mono<Boolean> send(T... events) {
+        return Flux.fromArray(events)
                 .flatMap(event -> {
                     client.enqueue(event);
                     return Mono.just(Boolean.TRUE);

@@ -21,6 +21,8 @@ segment:
             url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
             username: default
             password: default
+      buffer-size: 100
+      buffer-timeout-seconds: 10
     distributed:
       rabbit:
         uri: amqp://deploy:deploy@localhost:5678

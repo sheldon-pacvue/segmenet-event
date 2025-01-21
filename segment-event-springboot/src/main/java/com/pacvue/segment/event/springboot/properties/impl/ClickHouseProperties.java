@@ -1,13 +1,15 @@
 package com.pacvue.segment.event.springboot.properties.impl;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.util.Properties;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class ClickHouseProperties {
+public class ClickHouseProperties extends BufferProperties {
     private final static Properties DEFAULT_DATASOURCE;
 
     static {

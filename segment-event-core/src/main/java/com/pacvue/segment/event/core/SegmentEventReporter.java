@@ -23,7 +23,7 @@ public final class SegmentEventReporter {
     private final SegmentEventClient<Message> client;
 
 
-    public Mono<Boolean> report(List<Message> events) {
+    public Mono<Boolean> report(Message... events) {
         return client.send(events)
                 .doOnSuccess(b -> {
                     /*
@@ -32,7 +32,7 @@ public final class SegmentEventReporter {
                        内容类似 name+methods value timestamp
                        helium10.segmentio.async.send-events.count 100 1245547899
                      */
-                    Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.size()));
+                    Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.length));
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }

@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -14,9 +13,8 @@ import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Builder
 @Slf4j
-public class SegmentEventClientAmazonSQS<T extends Message> implements SegmentEventClient<T> {
+public class SegmentEventClientAmazonSQS<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientAmazonSQS<T>> {
     private final SqsAsyncClient client;
     private final String queueUrl;
 
@@ -36,10 +34,8 @@ public class SegmentEventClientAmazonSQS<T extends Message> implements SegmentEv
     }
 
 
-
-
     @Override
-    public Mono<Boolean> send(List<T> events) {
+    protected Mono<Boolean> send(List<T> events) {
         return Mono.fromFuture(() -> {
             // 将 events 转换为 SQS 批量发送请求
             List<SendMessageBatchRequestEntry> batchEntries = events.stream().map(event -> SendMessageBatchRequestEntry.builder()
@@ -62,6 +58,38 @@ public class SegmentEventClientAmazonSQS<T extends Message> implements SegmentEv
 
     @Override
     public void flush() {
+
+    }
+
+    public static class Builder<T extends Message> {
+        private String region;
+        private String queueUrl;
+        private String awsAccessKey;
+        private String awsSecretKey;
+
+        public Builder<T> region(String region) {
+            this.region = region;
+            return this;
+        }
+
+        public Builder<T> queueUrl(String queueUrl) {
+            this.queueUrl = queueUrl;
+            return this;
+        }
+
+        public Builder<T> awsAccessKey(String awsAccessKey) {
+            this.awsAccessKey = awsAccessKey;
+            return this;
+        }
+
+        public Builder<T> awsSecretKey(String awsSecretKey) {
+            this.awsSecretKey = awsSecretKey;
+            return this;
+        }
+
+        public SegmentEventClientAmazonSQS<T> build() {
+            return new SegmentEventClientAmazonSQS<>(region, queueUrl, awsAccessKey, awsSecretKey);
+        }
 
     }
 }

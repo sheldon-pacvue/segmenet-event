@@ -18,3 +18,12 @@ server:
   context-path: /segment
   webflux:
     base-path: /api
+
+cloud:
+  aws:
+    stack:
+      name: MyStack
+      region: us-west-2  # 您的 AWS 区域
+    credentials:
+      access-key: YOUR_AWS_ACCESS_KEY
+      secret-key: YOUR_AWS_SECRET_KEY

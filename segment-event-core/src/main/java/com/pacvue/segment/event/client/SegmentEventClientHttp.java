@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 @Slf4j
 @Builder
-public class SegmentEventClientHttp<T extends Message> implements SegmentEventClient<T> {
+public class SegmentEventClientHttp<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientHttp<T>> {
     @NonNull
     private final HttpClient httpClient;
     @NonNull

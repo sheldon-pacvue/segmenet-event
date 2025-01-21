@@ -4,6 +4,8 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
+import com.pacvue.segment.event.client.AbstractBufferSegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
 import com.pacvue.segment.event.core.SegmentEventReporter;
@@ -112,7 +114,8 @@ public class SegmentEventAutoConfiguration {
                         DateUtil.date().getTime() / 1000,
                         Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).map(i -> i / 1000).orElse(0L)
                 })
-                .build();
+                .build()
+                .buffer(ReactorLocalBuffer.<SegmentLogMessage>builder().bufferSize(properties.getBufferSize()).bufferTimeoutSeconds(properties.getBufferTimeoutSeconds()).build());
     }
 
     @Bean

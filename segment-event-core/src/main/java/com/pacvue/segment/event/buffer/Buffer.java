@@ -19,7 +19,7 @@ public interface Buffer<T extends Message> extends GsonConstant {
      * 取出数据
      */
     @NonNull
-    StopAccept accept(@NonNull Consumer<List<Message>> consumer);
+    StopAccept accept(@NonNull Consumer<List<T>> consumer);
 
     /**
      * 优雅关机

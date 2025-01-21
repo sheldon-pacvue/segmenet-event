@@ -23,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class SegmentEventClientSocket<T extends Message> implements SegmentEventClient<T> {
+public class SegmentEventClientSocket<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientSocket<T>> {
     private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final static int SOCKET_TIMEOUT = 5;
     // 常量定义
