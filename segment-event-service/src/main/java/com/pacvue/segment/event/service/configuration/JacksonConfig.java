@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.pacvue.segment.event.service.entity.dto.*;
+import com.pacvue.segment.event.service.entity.dto.message.*;
 import com.segment.analytics.messages.Message;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

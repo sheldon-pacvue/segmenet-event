@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 @Builder
 @Slf4j
-public class ReactorLocalBuffer<T extends Message> extends AbstractBuffer<T> {
+public class ReactorLocalBuffer<T> extends AbstractBuffer<T> {
     @Builder.Default
     private Sinks.Many<T> sink = Sinks.many().multicast().onBackpressureBuffer();
     @Builder.Default

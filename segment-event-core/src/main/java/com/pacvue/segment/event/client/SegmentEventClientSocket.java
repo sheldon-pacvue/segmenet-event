@@ -31,17 +31,17 @@ public class SegmentEventClientSocket<T extends Message> extends AbstractBufferS
     private static final String DEFAULT_LIB_VERSION = "0.0.0";
     private final String host;
     private final int port;
-    private final String secret;
     private final String endPoint;
+    private final String authorization;
 
     private volatile Socket socket;
     private long lastActivityTime;  // 上次活动时间
 
-    SegmentEventClientSocket(@NonNull String host, int port, @NotNull String secret, @NonNull String endPoint) {
+    SegmentEventClientSocket(@NonNull String host, int port, @NonNull String endPoint, @NonNull String authorization) {
         this.host = host;
         this.port = port;
-        this.secret = secret;
         this.endPoint = endPoint;
+        this.authorization = authorization;
         startTimeoutChecker();
     }
 
@@ -101,7 +101,7 @@ public class SegmentEventClientSocket<T extends Message> extends AbstractBufferS
         String libVersion = libraryInfo[1];
 
         // 构建请求头
-        String authorization = Base64.getEncoder().encodeToString((this.secret + ":").getBytes(StandardCharsets.UTF_8));
+        String authorization = Base64.getEncoder().encodeToString((this.authorization + ":").getBytes(StandardCharsets.UTF_8));
 
         return HttpMethod.POST + StrUtil.SPACE + endPoint + StrUtil.SPACE + HttpVersion.HTTP_1_1 + "\r\n" +
                 HttpHeaderNames.HOST + ": " + host + "\r\n" +
@@ -143,8 +143,8 @@ public class SegmentEventClientSocket<T extends Message> extends AbstractBufferS
     public static class Builder<T extends Message> {
         private String host;
         private int port;
-        private String secret;
         private String endPoint;
+        private String authorization;
 
         public Builder<T> host(String host) {
             this.host = host;
@@ -156,18 +156,18 @@ public class SegmentEventClientSocket<T extends Message> extends AbstractBufferS
             return this;
         }
 
-        public Builder<T> secret(String secret) {
-            this.secret = secret;
-            return this;
-        }
-
         public Builder<T> endPoint(String endPoint) {
             this.endPoint = endPoint;
             return this;
         }
 
+        public Builder<T> authorization(String authorization) {
+            this.authorization = authorization;
+            return this;
+        }
+
         public SegmentEventClientSocket<T> build() {
-            return new SegmentEventClientSocket<>(host, port, secret, endPoint);
+            return new SegmentEventClientSocket<>(host, port, endPoint, authorization);
         }
     }
 }

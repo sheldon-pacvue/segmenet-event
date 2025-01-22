@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Builder
-public class RabbitMQDistributedBuffer<T extends Message> extends AbstractBuffer<T> {
+public class RabbitMQDistributedBuffer<T> extends AbstractBuffer<T> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;

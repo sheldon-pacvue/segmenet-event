@@ -5,14 +5,15 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
-import com.pacvue.segment.event.client.AbstractBufferSegmentEventClient;
+import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
 import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentLogMessage;
+import com.pacvue.segment.event.entity.SegmentEventLogMessage;
+import com.pacvue.segment.event.springboot.properties.ClientProperties;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
-import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
+import com.pacvue.segment.event.springboot.properties.impl.AnalyticsProperties;
 import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
 import com.pacvue.segment.event.extend.ReactorMessageInterceptor;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
@@ -21,14 +22,16 @@ import com.segment.analytics.Log;
 import com.segment.analytics.messages.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,11 +42,11 @@ import java.util.Optional;
 })
 public class SegmentEventAutoConfiguration {
     @Bean
-    @ConditionalOnProperty(prefix = SegmentEventClientProperties.PROPERTIES_PREFIX, name = "secret")
-    @ConditionalOnMissingBean
-    public Analytics segmentAnalytics(SegmentEventClientProperties properties) {
+    @ConditionalOnMissingBean(name = "segmentEventClient")
+    public SegmentEventClient<Message> segmentEventClient(ClientProperties properties) throws NoSuchFieldException, IllegalAccessException {
+        AnalyticsProperties analyticsProperties = properties.getAnalytics();
         Logger log = LoggerFactory.getLogger(Analytics.class);
-        return Analytics.builder(properties.getSecret())
+        Analytics analytics = Analytics.builder(analyticsProperties.getWriteKey())
                 .log(new Log() {
                     @Override
                     public void print(Level level, String format, Object... args) {
@@ -57,19 +60,7 @@ public class SegmentEventAutoConfiguration {
                         log.error(String.format(format, args), error);
                     }
                 }).build();
-    }
-
-    @Bean
-    @ConditionalOnBean(Analytics.class)
-    @ConditionalOnMissingBean
-    public SegmentEventClientAnalytics<Message> segmentEventClientAnalytics(Analytics segmentAnalytics) throws NoSuchFieldException, IllegalAccessException {
-        return SegmentEventClientAnalytics.builder().analytics(segmentAnalytics).build();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientAnalytics<Message> segmentEventClientAnalytics) {
-        return SegmentEventReporter.builder().client(segmentEventClientAnalytics).build();
+        return SegmentEventClientAnalytics.builder().analytics(analytics).build();
     }
 
     /**
@@ -95,43 +86,51 @@ public class SegmentEventAutoConfiguration {
      * SETTINGS index_granularity = 8192;
      */
     @Bean
-    public SegmentEventClientClickHouse<SegmentLogMessage> eventLogger(LoggerProperties properties) {
+    @ConditionalOnMissingBean(name = "segmentEventLogger")
+    public SegmentEventClient<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> loggerProperties) {
+        LoggerProperties properties = loggerProperties.getIfAvailable(LoggerProperties::new);
         ClickHouseProperties clickhouse = properties.getClickhouse();
         DruidDataSource druidDataSource = new DruidDataSource();
         druidDataSource.configFromPropeties(clickhouse.getDataSourceProperties());
 
-        return SegmentEventClientClickHouse.<SegmentLogMessage>builder()
+        return SegmentEventClientClickHouse.<SegmentEventLogMessage>builder()
                 .dataSource(druidDataSource)
                 .insertSql(clickhouse.getInsertSql())
                 .argumentsConverter(event -> new Object[]{
-                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::toSqlDate).orElse(null),
+                        Optional.ofNullable(DateUtil.date(event.eventTime())).map(DateTime::toSqlDate).orElse(null),
                         DigestUtil.md5Hex(event.toString()),
                         event.userId(),
-                        event.type().name(),
+                        event.type(),
                         event.toString(),
-                        event.result(),
+                        event.reported(),
                         event.operation(),
                         DateUtil.date().getTime() / 1000,
-                        Optional.ofNullable(DateUtil.date(event.sentAt())).map(DateTime::getTime).map(i -> i / 1000).orElse(0L)
+                        event.eventTime().getTime() / 1000
                 })
                 .build()
-                .buffer(ReactorLocalBuffer.<SegmentLogMessage>builder().bufferSize(properties.getBufferSize()).bufferTimeoutSeconds(properties.getBufferTimeoutSeconds()).build());
+                .buffer(ReactorLocalBuffer.<SegmentEventLogMessage>builder().bufferSize(properties.getBufferSize()).bufferTimeoutSeconds(properties.getBufferTimeoutSeconds()).build());
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties,
-                               SegmentEventReporter segmentEventReporter,
-                               SegmentEventClientClickHouse<SegmentLogMessage> eventLogger,
-                               List<ReactorMessageTransformer> transformers,
-                               List<ReactorMessageInterceptor> interceptors) {
+    public SegmentEventReporter segmentEventReporter(@Qualifier("segmentEventClient") SegmentEventClient<Message> segmentEventClient,
+                                                     @Qualifier("segmentEventLogger") SegmentEventClient<SegmentEventLogMessage> segmentEventLogger) {
+        return SegmentEventReporter.builder()
+                .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
+                .client(segmentEventClient)
+                .eventLogger(segmentEventLogger)
+                .build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+                               ObjectProvider<List<ReactorMessageTransformer>> transformers,
+                               ObjectProvider<List<ReactorMessageInterceptor>> interceptors) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .eventLogger(eventLogger)
-                .secret(properties.getSecret())
-                .reportApp(properties.getAppId())
-                .messageTransformers(transformers)
-                .messageInterceptors(interceptors)
+                .messageTransformers(transformers.getIfAvailable(ArrayList::new))
+                .messageInterceptors(interceptors.getIfAvailable(ArrayList::new))
                 .build();
     }
 }

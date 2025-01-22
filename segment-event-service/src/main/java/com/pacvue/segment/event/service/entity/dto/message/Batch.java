@@ -1,4 +1,4 @@
-package com.pacvue.segment.event.service.entity.dto;
+package com.pacvue.segment.event.service.entity.dto.message;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.segment.analytics.messages.Message;

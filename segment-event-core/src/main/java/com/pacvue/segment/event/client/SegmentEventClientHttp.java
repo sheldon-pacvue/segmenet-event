@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 @Slf4j
 @Builder
-public class SegmentEventClientHttp<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientHttp<T>> {
+public class SegmentEventClientHttp<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientHttp<T>> {
     @NonNull
     private final HttpClient httpClient;
     @NonNull
@@ -27,7 +27,7 @@ public class SegmentEventClientHttp<T extends Message> extends AbstractBufferSeg
     @NonNull
     private final Integer retry;
     @NonNull
-    private final String secret;
+    private final String authorization;
     private final Consumer<? super HttpHeaders> headerBuilder;
     @Builder.Default
     @NonNull
@@ -37,7 +37,7 @@ public class SegmentEventClientHttp<T extends Message> extends AbstractBufferSeg
     public Mono<Boolean> send(List<T> events) {
         return httpClient
                 .headers(headers-> {
-                    headers.add(HttpHeaderNames.AUTHORIZATION, secret);
+                    headers.add(HttpHeaderNames.AUTHORIZATION, authorization);
                     headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     headers.add(HttpHeaderNames.ACCEPT, HttpHeaderValues.APPLICATION_JSON);
                     if (null != headerBuilder) {
@@ -66,13 +66,13 @@ public class SegmentEventClientHttp<T extends Message> extends AbstractBufferSeg
     @Accessors(chain = true)
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class Body<T extends Message> {
+    public static class Body<T> {
         public final static String SEND_AT_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
 
         private List<T> batch;
         private String sendAt;
 
-        public static <T extends Message> Mono<String> generate(List<T> events) {
+        public static <T> Mono<String> generate(List<T> events) {
             Body<T> body = new Body<T>().setBatch(events).setSendAt(DateUtil.format(new Date(), SEND_AT_FORMAT));
             return Mono.just(gson.toJson(body));
         }

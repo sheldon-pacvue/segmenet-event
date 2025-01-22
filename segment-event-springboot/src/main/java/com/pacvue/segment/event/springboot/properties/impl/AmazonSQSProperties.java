@@ -9,7 +9,7 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class AmazonSQSProperties extends BufferProperties {
     private String region;
-    private String queueUrl;
+    private String queueName;
     private String awsAccessKey;
     private String awsSecretKey;
 }

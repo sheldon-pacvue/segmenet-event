@@ -7,9 +7,6 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class SocketProperties extends BufferProperties {
-    private String host;
-    private Integer port;
-    private String endPoint;
-    private String authorization;
+public class AnalyticsProperties extends BufferProperties {
+    private String writeKey;
 }

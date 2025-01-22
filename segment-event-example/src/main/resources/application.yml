@@ -1,7 +1,6 @@
 spring:
   application:
     name: segment-event-example
-    port: 9090
 
 management:
   endpoints:
@@ -15,30 +14,13 @@ management:
 segment:
   event:
     logger:
-      clickhouse:
-        data-source-properties:
-          druid:
-            url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
-            username: default
-            password: default
-      buffer-size: 100
-      buffer-timeout-seconds: 10
-    distributed:
-      rabbit:
-        uri: amqp://deploy:deploy@localhost:5678
-        exchangeName: amq.direct
-        routingKey: segment-event-example
-        queueName: segment-event-example
+      amazon-sqs:
+        region: "us-east-1"
+        queueName: helium10-segment-dev
+        aws-access-key:
+        aws-secret-key:
     client:
-      http:
-        base-url: "http://localhost:8080"
-      file:
-        path: "segment"
-        file-name: "1.log"
-        max-file-size-mb: 1
-      socket:
-        end-point: "/v1/import"
-        host: "localhost"
-        port: 9090
-    secret: "cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp"
-    app-id: ${spring.application.name}
+      analytics:
+        writeKey:
+server:
+  port: 8082

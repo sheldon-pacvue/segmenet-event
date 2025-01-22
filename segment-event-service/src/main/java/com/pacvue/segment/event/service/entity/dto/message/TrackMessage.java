@@ -1,6 +1,6 @@
-package com.pacvue.segment.event.service.entity.dto;
+package com.pacvue.segment.event.service.entity.dto.message;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.*;
 import com.segment.analytics.messages.Message;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,8 +14,9 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true, fluent = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY) // 自动检测字段
-public final class PageMessage implements Message {
+public final class TrackMessage implements Message {
   private Type type;
   private String messageId;
   private Date sentAt;
@@ -24,7 +25,6 @@ public final class PageMessage implements Message {
   private String anonymousId;
   private String userId;
   private Map<String, Object> integrations;
-  private String name;
+  private String event;
   private Map<String, ?> properties;
-  private String category;
 }

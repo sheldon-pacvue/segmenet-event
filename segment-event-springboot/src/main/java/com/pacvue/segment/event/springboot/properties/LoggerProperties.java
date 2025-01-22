@@ -21,4 +21,6 @@ public class LoggerProperties extends BufferProperties {
   public HttpProperties http;
   public RabbitMQProperties rabbit;
   public SocketProperties socket;
+  public AmazonSQSProperties amazonSqs;
+  public AnalyticsProperties analytics;
 }

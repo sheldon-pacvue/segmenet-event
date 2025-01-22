@@ -1,8 +1,7 @@
 package com.pacvue.segment.event.core;
 
-import com.pacvue.segment.event.client.SegmentEventClient;
-import com.pacvue.segment.event.entity.SegmentLogMessage;
 import com.pacvue.segment.event.generator.*;
+import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.extend.ReactorMessageInterceptor;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
@@ -19,20 +18,14 @@ import java.util.List;
 
 @Slf4j
 @Builder
-public final class SegmentIO  {
+public final class SegmentIO implements GsonConstant {
     private final SegmentEventReporter reporter;
-    @NonNull
-    private final SegmentEventClient<SegmentLogMessage> eventLogger;
     @Builder.Default
     @NonNull
     private final List<ReactorMessageTransformer> messageTransformers = new ArrayList<>();
     @Builder.Default
     @NonNull
     private final List<ReactorMessageInterceptor> messageInterceptors = new ArrayList<>();
-    @NonNull
-    private final String secret;
-    @NonNull
-    private final String reportApp;
 
     /**
      * 开始接受事件，并且开始上报
@@ -51,7 +44,6 @@ public final class SegmentIO  {
      */
     public void tryShutdown() {
         reporter.flush();
-        eventLogger.flush();
         log.info("SegmentIO shutdown");
     }
 
@@ -93,35 +85,13 @@ public final class SegmentIO  {
 
     private <T extends Message> Mono<Boolean> deliverReact(Mono<T> message) {
         return message
-                .flatMap(event -> reporter.report(event)
-                        .publishOn(Schedulers.boundedElastic())
-                        .doOnSuccess(b -> {
-                            log.debug("report success, data: {}, result: {}", event, b);
-                            tryLog(event, true).subscribe();
-                        })
-                        .onErrorResume(throwable -> {
-                            log.warn("report failed, switching to single event processing.", throwable);
-                            return tryLog(event, false);
-                        }))
+                .flatMap(reporter::report)
                 .onErrorResume(ex -> {
                     log.error("deliver failed", ex);
                     return Mono.just(Boolean.FALSE);
                 })
                 // IO密集型采用Schedulers.boundedElastic
                 .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    private Mono<Boolean> tryLog(Message event, boolean result) {
-        return eventLogger.send(SegmentLogMessage.builder()
-                        .message(event)
-                        .result(result)
-                        .secret(secret)
-                        .reportApp(reportApp)
-                        .build())
-                .onErrorResume(ex -> {
-                    log.warn("try log failed, event: {}", event, ex);
-                    return Mono.just(Boolean.FALSE);
-                });
     }
 
     private <V extends MessageBuilder<?, ?>> Mono<Message> buildMessage(V builder) {

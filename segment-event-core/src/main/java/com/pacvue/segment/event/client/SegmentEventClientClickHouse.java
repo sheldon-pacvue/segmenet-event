@@ -1,10 +1,8 @@
 package com.pacvue.segment.event.client;
 
-import com.segment.analytics.messages.Message;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.sql.DataSource;
@@ -19,7 +17,7 @@ import java.util.function.Function;
 
 @Builder
 @Slf4j
-public class SegmentEventClientClickHouse<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientClickHouse<T>> {
+public class SegmentEventClientClickHouse<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientClickHouse<T>> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     @NonNull

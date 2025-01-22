@@ -1,29 +1,79 @@
+## 自定义配置
+sqs:
+  log:
+    queue: helium10-segment-dev
+  message:
+#    queue: helium10-segment-dev
+rabbitmq:
+  log:
+    queue: segment-event-log
+  message:
+    queue: segment-event-message
+## Spring配置
 spring:
   application:
     name: segment-event-service
-  datasource:
-    url: jdbc:mysql://localhost:3306/your_database
-    username: your_username
-    password: your_password
-    driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
   rabbitmq:
     host: localhost   # RabbitMQ 服务器地址（本地）
-    port: 15672        # 默认端口
+    port: 5678        # 默认端口
     username: deploy   # 默认用户
     password: deploy   # 默认密码
     virtual-host: "/" # 默认虚拟主机
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true # 开启消费者失败重试
+          initial-interval: 1000ms # 初识的失败等待时长为1秒
+          multiplier: 2 # 失败的等待时长倍数，下次等待时长 = multiplier * last-interval
+          max-attempts: 3 # 最大重试次数
+          stateless: true # true无状态；false有状态。如果业务中包含事务，这里改为false
+## Apollo 配置中心
+app.id: ${spring.application.name}
+apollo:
+  meta: https://apollo-configservice-wick-adtomic.pacvue.com
+  cacheDir: /opt/data
+  bootstrap:
+    enabled: true
+    eagerLoad.enabled: true
+    namespaces: application,services,environment
+## Amazon配置
+spring.cloud.aws:
+  region:
+    static: us-east-1
+  credentials:
+    access-key:
+    secret-key:
+## Segment 配置
+segment.event:
+  logger:
+    buffer-size: 100
+    buffer-timeout-seconds: 10
+    clickhouse:
+      data-source-properties:
+        druid:
+          driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+          url: jdbc:clickhouse://localhost:18123/default?clickhouse.jdbc.v2=true
+          username: default
+          password: default
+          validationQuery: SELECT 1
+          testWhileIdle: true
+  client:
+    analytics:
+      writeKey:
+## 数据库配置
+mybatis-flex:
+  datasource:
+    clickhouse:
+      url: jdbc:clickhouse://localhost:18123/default?jdbcCompliant=false
+      username: default
+      password: default
+      driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+      pool:
+        max-size: 20
+        initial-size: 5
+        max-idle-time: 30000
+        validation-query: "SELECT 1"
+## web配置
 server:
-  servlet:
-    context-path: /api
-  context-path: /segment
-  webflux:
-    base-path: /api
-
-cloud:
-  aws:
-    stack:
-      name: MyStack
-      region: us-west-2  # 您的 AWS 区域
-    credentials:
-      access-key: YOUR_AWS_ACCESS_KEY
-      secret-key: YOUR_AWS_SECRET_KEY
+  port: 8081

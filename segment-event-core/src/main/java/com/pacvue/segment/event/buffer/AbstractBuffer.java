@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 @Accessors(chain = true)
-public abstract class AbstractBuffer<T extends Message> implements Buffer<T> {
+public abstract class AbstractBuffer<T> implements Buffer<T> {
     protected boolean isAccepted = false;
 
     @NotNull

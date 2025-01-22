@@ -12,9 +12,12 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 @Slf4j
-public abstract class AbstractBufferSegmentEventClient<T extends Message, C extends AbstractBufferSegmentEventClient<T, C>> implements BufferSegmentEventClient<T, C> {
+public abstract class AbstractBufferSegmentEventClient<T, C extends AbstractBufferSegmentEventClient<T, C>> implements BufferSegmentEventClient<T, C> {
     private Buffer<T> buffer = ReactorLocalBuffer.<T>builder().bufferSize(5).bufferTimeoutSeconds(10).build();
     private StopAccept stopAccept;
 

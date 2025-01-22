@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Builder
 @Slf4j
-public class SegmentEventClientRabbit<T extends Message> extends AbstractBufferSegmentEventClient<T, SegmentEventClientRabbit<T>> {
+public class SegmentEventClientRabbit<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientRabbit<T>> {
     private final String exchangeName;
     private final String routingKey;
     private final String queueName;

@@ -1,21 +1,31 @@
 package com.pacvue.segment.event.service.configuration;
 
-import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.crypto.digest.DigestUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
+import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentLogMessage;
+import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
+import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
-import com.pacvue.segment.event.springboot.properties.SegmentEventClientProperties;
+import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 public class SegmentEventConfiguration {
@@ -33,17 +43,47 @@ public class SegmentEventConfiguration {
                 .build();
     }
 
+    @Bean
+    public SegmentEventClientClickHouse<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> properties, DataSource dataSource) {
+        LoggerProperties loggerProperties = properties.getIfAvailable(LoggerProperties::new);
+        ClickHouseProperties clickhouse = Optional.ofNullable(loggerProperties.getClickhouse()).orElseGet(ClickHouseProperties::new);
+        SegmentEventClientClickHouse<SegmentEventLogMessage> eventLogger = SegmentEventClientClickHouse.<SegmentEventLogMessage>builder()
+                .dataSource(dataSource)
+                .insertSql(clickhouse.getInsertSql())
+                .argumentsConverter(event -> new Object[]{
+                        Optional.ofNullable(DateUtil.date(event.eventTime())).map(DateTime::toSqlDate).orElse(null),
+                        DigestUtil.md5Hex(event.message()),
+                        event.userId(),
+                        event.type(),
+                        event.message(),
+                        event.reported(),
+                        event.operation(),
+                        DateUtil.date().getTime() / 1000,
+                        event.eventTime().getTime() / 1000
+                })
+                .build();
+        if (loggerProperties.getBufferSize() > 0 && loggerProperties.getBufferTimeoutSeconds() > 0) {
+            eventLogger.buffer(ReactorLocalBuffer.<SegmentEventLogMessage>builder().bufferSize(loggerProperties.getBufferSize()).bufferTimeoutSeconds(loggerProperties.getBufferTimeoutSeconds()).build());
+        }
+        return eventLogger;
+    }
+
     /**
      * 上报器
      *
-     * @param client 官方提供的客户端
+     * @param segmentEventClient 上报客户端
+     * @param segmentEventLogger 日志记录器
      * @param metricsCounter 指标计数器
      * @return 事件上报器
      */
     @Bean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClientAnalytics<Message> client, MetricsCounter metricsCounter) {
+    public SegmentEventReporter segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
+                                                     SegmentEventClient<SegmentEventLogMessage> segmentEventLogger,
+                                                     MetricsCounter metricsCounter) {
         return SegmentEventReporter.builder()
-                .client(client)
+                .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
+                .client(segmentEventClient)
+                .eventLogger(segmentEventLogger)
                 .metricsCounter(metricsCounter)
                 .build();
     }
@@ -51,19 +91,15 @@ public class SegmentEventConfiguration {
     /**
      * 核心工具
      *
-     * @param properties 配置
      * @param segmentEventReporter 上报器
-     * @param eventLogger 事件日志记录器
      * @param transformers 转换器
      * @return 客户端
      */
     @Bean
-    public SegmentIO segmentIO(SegmentEventClientProperties properties, SegmentEventReporter segmentEventReporter, SegmentEventClientClickHouse<SegmentLogMessage> eventLogger, List<ReactorMessageTransformer> transformers) {
+    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+                               List<ReactorMessageTransformer> transformers) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)
-                .eventLogger(eventLogger)
-                .secret(properties.getSecret())
-                .reportApp(properties.getAppId())
                 .messageTransformers(transformers)
                 .build();
     }

@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.function.Consumer;
 
-public interface Buffer<T extends Message> extends GsonConstant {
+public interface Buffer<T> extends GsonConstant {
     /**
      * 存入数据
      */
