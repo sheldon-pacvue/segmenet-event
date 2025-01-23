@@ -7,14 +7,14 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
-import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
+import com.pacvue.segment.event.client.SegmentEventClientDataSource;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.springboot.properties.ClientProperties;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.impl.AnalyticsProperties;
-import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
+import com.pacvue.segment.event.springboot.properties.impl.DataSourceProperties;
 import com.pacvue.segment.event.extend.ReactorMessageInterceptor;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.segment.analytics.Analytics;
@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
@@ -89,11 +88,11 @@ public class SegmentEventAutoConfiguration {
     @ConditionalOnMissingBean(name = "segmentEventLogger")
     public SegmentEventClient<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> loggerProperties) {
         LoggerProperties properties = loggerProperties.getIfAvailable(LoggerProperties::new);
-        ClickHouseProperties clickhouse = properties.getClickhouse();
+        DataSourceProperties clickhouse = properties.getDatasource();
         DruidDataSource druidDataSource = new DruidDataSource();
         druidDataSource.configFromPropeties(clickhouse.getDataSourceProperties());
 
-        return SegmentEventClientClickHouse.<SegmentEventLogMessage>builder()
+        return SegmentEventClientDataSource.<SegmentEventLogMessage>builder()
                 .dataSource(druidDataSource)
                 .insertSql(clickhouse.getInsertSql())
                 .argumentsConverter(event -> new Object[]{

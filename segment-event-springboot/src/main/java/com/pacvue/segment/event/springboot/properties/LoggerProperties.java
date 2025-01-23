@@ -16,7 +16,7 @@ import static com.pacvue.segment.event.springboot.properties.LoggerProperties.PR
 public class LoggerProperties extends BufferProperties {
   public final static String PROPERTIES_PREFIX = "segment.event.logger";
 
-  public ClickHouseProperties clickhouse;
+  public DataSourceProperties datasource;
   public FileProperties file;
   public HttpProperties http;
   public RabbitMQProperties rabbit;

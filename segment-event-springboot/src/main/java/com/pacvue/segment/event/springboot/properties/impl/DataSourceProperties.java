@@ -9,7 +9,7 @@ import java.util.Properties;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class ClickHouseProperties extends BufferProperties {
+public class DataSourceProperties extends BufferProperties {
     private final static Properties DEFAULT_DATASOURCE;
 
     static {

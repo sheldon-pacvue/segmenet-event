@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 @Builder
 @Slf4j
-public class SegmentEventClientClickHouse<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientClickHouse<T>> {
+public class SegmentEventClientDataSource<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientDataSource<T>> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     @NonNull

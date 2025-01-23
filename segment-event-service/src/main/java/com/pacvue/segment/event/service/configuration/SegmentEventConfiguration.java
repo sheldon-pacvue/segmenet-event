@@ -1,22 +1,18 @@
 package com.pacvue.segment.event.service.configuration;
 
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.crypto.digest.DigestUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
-import com.pacvue.segment.event.client.SegmentEventClientClickHouse;
+import com.pacvue.segment.event.client.SegmentEventClientMybatisFlex;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
 import com.pacvue.segment.event.metric.MetricsCounter;
+import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
+import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
-import com.pacvue.segment.event.springboot.properties.impl.ClickHouseProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,7 +21,6 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 import java.util.List;
-import java.util.Optional;
 
 @Configuration
 public class SegmentEventConfiguration {
@@ -44,23 +39,12 @@ public class SegmentEventConfiguration {
     }
 
     @Bean
-    public SegmentEventClientClickHouse<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> properties, DataSource dataSource) {
+    public SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties, DataSource dataSource) {
         LoggerProperties loggerProperties = properties.getIfAvailable(LoggerProperties::new);
-        ClickHouseProperties clickhouse = Optional.ofNullable(loggerProperties.getClickhouse()).orElseGet(ClickHouseProperties::new);
-        SegmentEventClientClickHouse<SegmentEventLogMessage> eventLogger = SegmentEventClientClickHouse.<SegmentEventLogMessage>builder()
+        SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> eventLogger = SegmentEventClientMybatisFlex.<SegmentEventLogMessage, SegmentEventLog>builder()
                 .dataSource(dataSource)
-                .insertSql(clickhouse.getInsertSql())
-                .argumentsConverter(event -> new Object[]{
-                        Optional.ofNullable(DateUtil.date(event.eventTime())).map(DateTime::toSqlDate).orElse(null),
-                        DigestUtil.md5Hex(event.message()),
-                        event.userId(),
-                        event.type(),
-                        event.message(),
-                        event.reported(),
-                        event.operation(),
-                        DateUtil.date().getTime() / 1000,
-                        event.eventTime().getTime() / 1000
-                })
+                .mapperClass(SegmentEventLogMapper.class)
+                .argumentsConverter(SegmentEventLog::fromMessage)
                 .build();
         if (loggerProperties.getBufferSize() > 0 && loggerProperties.getBufferTimeoutSeconds() > 0) {
             eventLogger.buffer(ReactorLocalBuffer.<SegmentEventLogMessage>builder().bufferSize(loggerProperties.getBufferSize()).bufferTimeoutSeconds(loggerProperties.getBufferTimeoutSeconds()).build());

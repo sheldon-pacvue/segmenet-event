@@ -14,7 +14,7 @@ import static com.pacvue.segment.event.springboot.properties.ClientProperties.PR
 public class ClientProperties {
   public final static String PROPERTIES_PREFIX = "segment.event.client";
 
-  public ClickHouseProperties clickhouse;
+  public DataSourceProperties clickhouse;
   public FileProperties file;
   public HttpProperties http;
   public RabbitMQProperties rabbit;
