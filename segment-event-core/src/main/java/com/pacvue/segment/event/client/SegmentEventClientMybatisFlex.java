@@ -1,16 +1,15 @@
 package com.pacvue.segment.event.client;
 
-import com.pacvue.segment.event.util.MyBatisUtils;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import reactor.core.publisher.Mono;
 
 import com.mybatisflex.core.BaseMapper;
-import javax.sql.DataSource;
+
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -22,7 +21,7 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     @NonNull
-    private final DataSource dataSource;
+    private final SqlSessionFactory sqlSessionFactory;
     @NonNull
     private final Class<? extends BaseMapper<D>> mapperClass;
     @NonNull
@@ -31,7 +30,7 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
     @Override
     public Mono<Boolean> send(List<T> events) {
         return Mono.fromCallable(() -> {
-            try (SqlSession sqlSession = MyBatisUtils.getSqlSessionFactory(dataSource).openSession()) {
+            try (SqlSession sqlSession = sqlSessionFactory.openSession()) {
                 BaseMapper<D> mapper = sqlSession.getMapper(mapperClass);
                 int result = mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()));
                 sqlSession.commit();

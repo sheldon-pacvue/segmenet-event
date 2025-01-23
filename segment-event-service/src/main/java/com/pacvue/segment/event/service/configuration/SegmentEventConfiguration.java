@@ -15,6 +15,7 @@ import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,10 +40,10 @@ public class SegmentEventConfiguration {
     }
 
     @Bean
-    public SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties, DataSource dataSource) {
+    public SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties, SqlSessionFactory sessionFactory) {
         LoggerProperties loggerProperties = properties.getIfAvailable(LoggerProperties::new);
         SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> eventLogger = SegmentEventClientMybatisFlex.<SegmentEventLogMessage, SegmentEventLog>builder()
-                .dataSource(dataSource)
+                .sqlSessionFactory(sessionFactory)
                 .mapperClass(SegmentEventLogMapper.class)
                 .argumentsConverter(SegmentEventLog::fromMessage)
                 .build();
