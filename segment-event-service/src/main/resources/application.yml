@@ -36,7 +36,7 @@ apollo:
   bootstrap:
     enabled: true
     eagerLoad.enabled: true
-    namespaces: application,services,environment
+    namespaces: application
 ## Amazon配置
 spring.cloud.aws:
   region:
@@ -60,7 +60,7 @@ segment.event:
           testWhileIdle: true
   client:
     analytics:
-      writeKey:
+      writeKey: cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp
 ## 数据库配置
 mybatis-flex:
   datasource:

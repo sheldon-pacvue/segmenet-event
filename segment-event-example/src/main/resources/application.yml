@@ -21,6 +21,6 @@ segment:
         aws-secret-key:
     client:
       analytics:
-        writeKey:
+        writeKey: cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp
 server:
   port: 8082
