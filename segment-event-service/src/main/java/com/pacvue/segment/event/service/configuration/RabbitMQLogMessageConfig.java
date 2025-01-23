@@ -2,10 +2,12 @@ package com.pacvue.segment.event.service.configuration;
 
 import org.springframework.amqp.core.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@ConditionalOnProperty("rabbitmq.log.queue")
 public class RabbitMQLogMessageConfig {
     @Value("${rabbitmq.log.queue}")
     private String logQueueName;
