@@ -35,7 +35,7 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
     @Override
     public Mono<Boolean> send(List<T> events) {
         return Mono.fromCallable(() -> {
-            try (SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
+            try (SqlSession sqlSession = sqlSessionFactory.openSession(isSupportValues ? ExecutorType.SIMPLE : ExecutorType.BATCH)) {
                 BaseMapper<D> mapper = sqlSession.getMapper(mapperClass);
 
                 List<D> convertedList = events.stream()
@@ -43,11 +43,11 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
                         .toList();
                 int result = 0;
                 if (isSupportValues) {
-                    result += mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()), events.size());
+                    result = mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()));
                 } else {
                     convertedList.forEach(mapper::insert);
                     // 执行批处理并提交
-                    result += sqlSession.flushStatements().stream()
+                    result = sqlSession.flushStatements().stream()
                             .flatMapToInt(br -> Arrays.stream(br.getUpdateCounts())) // 展开所有 updateCounts
                             .map(uc -> uc == Statement.SUCCESS_NO_INFO ? 1 : uc)     // 处理 SUCCESS_NO_INFO
                             .reduce(result, Integer::sum);                                // 累加所有值

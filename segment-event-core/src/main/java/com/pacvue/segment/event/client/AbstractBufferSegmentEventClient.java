@@ -50,7 +50,8 @@ public abstract class AbstractBufferSegmentEventClient<T, C extends AbstractBuff
         }
         return Flux.fromArray(events)
                 .flatMap(this.buffer::commit)
-                .all(success -> success);
+                .all(success -> success)
+                .defaultIfEmpty(Boolean.TRUE);
     }
 
     @Override

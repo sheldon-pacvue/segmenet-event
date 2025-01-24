@@ -33,7 +33,7 @@ public class SegmentEventClientMybatisPlus<T, D> extends AbstractBufferSegmentEv
     @Override
     public Mono<Boolean> send(List<T> events) {
         return Mono.fromCallable(() -> {
-            try (SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
+            try (SqlSession sqlSession = sqlSessionFactory.openSession(isSupportValues ? ExecutorType.SIMPLE : ExecutorType.BATCH)) {
                 BaseMapper<D> mapper = sqlSession.getMapper(mapperClass);
                 List<D> convertedList = events.stream().map(argumentsConverter).toList();
                 int result = 0;
@@ -43,7 +43,12 @@ public class SegmentEventClientMybatisPlus<T, D> extends AbstractBufferSegmentEv
                             .map(uc -> uc == Statement.SUCCESS_NO_INFO ? 1 : uc)     // 处理 SUCCESS_NO_INFO
                             .reduce(result, Integer::sum);                                // 累加所有值
                 } else {
-                    result = convertedList.stream().map(mapper::insert).reduce(result, Integer::sum);
+                    convertedList.forEach(mapper::insert);
+                    // 执行批处理并提交
+                    result = sqlSession.flushStatements().stream()
+                            .flatMapToInt(br -> Arrays.stream(br.getUpdateCounts())) // 展开所有 updateCounts
+                            .map(uc -> uc == Statement.SUCCESS_NO_INFO ? 1 : uc)     // 处理 SUCCESS_NO_INFO
+                            .reduce(result, Integer::sum);                                // 累加所有值
                 }
                 sqlSession.commit();
                 log.debug("Batch insert completed: {} records inserted", result);

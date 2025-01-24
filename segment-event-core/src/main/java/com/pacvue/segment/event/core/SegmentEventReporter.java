@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -53,11 +54,12 @@ public final class SegmentEventReporter implements GsonConstant {
                     }
                 })
                 .onErrorResume(throwable -> {
-                    log.warn("report failed, switching to single event processing.", throwable);
-                    for (Message event : events) {
-                        tryLog(event, false).subscribe();
-                    }
-                    return Mono.just(Boolean.FALSE);
+                    log.debug("report failed, switching to single event processing.", throwable);
+                    return Flux.fromArray(events)
+                            .flatMap(event -> tryLog(event, false)
+                                    .onErrorReturn(false)) // 任意失败返回 false
+                            .all(success -> success) // 只要有 false 就返回 false
+                            .defaultIfEmpty(Boolean.TRUE); // 处理空集合情况;
                 })
                 .subscribeOn(Schedulers.boundedElastic());
 

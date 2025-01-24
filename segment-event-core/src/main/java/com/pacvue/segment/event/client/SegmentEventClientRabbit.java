@@ -38,7 +38,8 @@ public class SegmentEventClientRabbit<T> extends AbstractBufferSegmentEventClien
                         return Mono.error(e);
                     }
                 })
-                .all(success -> success);
+                .all(success -> success)
+                .defaultIfEmpty(Boolean.TRUE);
     }
 
     @Override

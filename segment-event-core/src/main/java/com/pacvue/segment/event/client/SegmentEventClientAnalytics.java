@@ -27,7 +27,8 @@ public class SegmentEventClientAnalytics<T extends Message> implements SegmentEv
                     client.enqueue(event);
                     return Mono.just(Boolean.TRUE);
                 })
-                .all(success -> success);
+                .all(success -> success)
+                .defaultIfEmpty(Boolean.TRUE);
     }
 
     @Override

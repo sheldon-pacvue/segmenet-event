@@ -3,6 +3,7 @@ package com.pacvue.segment.event.service.configuration;
 import com.pacvue.segment.event.buffer.ReactorLocalBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientMybatisFlex;
+import com.pacvue.segment.event.client.SegmentEventClientSendReject;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentEventLogMessage;
@@ -45,11 +46,17 @@ public class SegmentEventConfiguration {
                 .sqlSessionFactory(sessionFactory)
                 .mapperClass(SegmentEventLogMapper.class)
                 .argumentsConverter(SegmentEventLog::fromMessage)
+                .isSupportValues(false)
                 .build();
         if (loggerProperties.getBufferSize() > 0 && loggerProperties.getBufferTimeoutSeconds() > 0) {
             eventLogger.buffer(ReactorLocalBuffer.<SegmentEventLogMessage>builder().bufferSize(loggerProperties.getBufferSize()).bufferTimeoutSeconds(loggerProperties.getBufferTimeoutSeconds()).build());
         }
         return eventLogger;
+    }
+
+    @Bean
+    public SegmentEventClient<Message> segmentEventClient() {
+        return SegmentEventClientSendReject.<Message>builder().build();
     }
 
     /**
