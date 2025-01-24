@@ -1,6 +1,7 @@
 package com.pacvue.segment.event.service.entity.dto;
 
 import cn.hutool.core.date.DateUtil;
+import com.segment.analytics.messages.Message;
 import lombok.Data;
 
 import java.util.Date;
@@ -14,7 +15,7 @@ public class ResendSegmentEventDTO {
     // createAt < to
     private Date to = new Date();
     // 事件类型
-    private String type = "track";
+    private String type = Message.Type.track.name();
     // 操作类型
     private Short operation;
 }
