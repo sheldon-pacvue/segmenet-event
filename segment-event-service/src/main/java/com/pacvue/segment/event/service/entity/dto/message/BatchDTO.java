@@ -16,7 +16,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Accessors(chain = true, fluent = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY) // 自动检测字段
-public final class Batch {
+public final class BatchDTO {
   private List<Message> batch;
   private Date sentAt;
   private Map<String, ?> context;

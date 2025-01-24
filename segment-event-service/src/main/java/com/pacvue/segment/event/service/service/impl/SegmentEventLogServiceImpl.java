@@ -1,16 +1,13 @@
 package com.pacvue.segment.event.service.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mybatis.flex.reactor.spring.ReactorServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.row.Db;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventBody;
+import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
 import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
 import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.service.service.SegmentEventLogService;
-import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cursor.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +27,7 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
     private SegmentIO segmentIO;
 
     @Override
-    public Flux<SegmentEventLog> getEventLogs(ResendSegmentEventBody body) {
+    public Flux<SegmentEventLog> getEventLogs(ResendSegmentEventDTO body) {
         // 直接使用 Flux.create 创建流，延迟执行
         return Flux.create((FluxSink<SegmentEventLog> fluxSink)  -> {
             Db.tx(() -> {
@@ -56,7 +53,7 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
     }
 
     @Override
-    public void resendEventLogs(ResendSegmentEventBody body) {
+    public void resendEventLogs(ResendSegmentEventDTO body) {
         getEventLogs(body)
                 .subscribe(data -> {
                     log.info("resend message: {}", data.getMessage());

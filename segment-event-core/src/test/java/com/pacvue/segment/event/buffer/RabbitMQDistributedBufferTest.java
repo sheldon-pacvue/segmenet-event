@@ -37,7 +37,7 @@ class RabbitMQDistributedBufferTest {
         channel.queueDeclare(QUEUE_NAME, true, false, false, null);
         channel.queueBind(QUEUE_NAME, EXCHANGE, ROUTING_KEY);
 
-        store = RabbitMQDistributedBuffer.builder()
+        store = RabbitMQDistributedBuffer.<Message>builder()
                 .connection(connection)
                 .channel(channel)
                 .exchangeName(EXCHANGE)

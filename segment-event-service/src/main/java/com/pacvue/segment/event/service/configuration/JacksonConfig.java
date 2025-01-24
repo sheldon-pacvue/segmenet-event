@@ -31,12 +31,12 @@ public class JacksonConfig {
             String type = node.get("type").asText();
 
             return switch (Message.Type.valueOf(type)) {
-                case identify -> p.getCodec().treeToValue(node, IdentifyMessage.class);
-                case group -> p.getCodec().treeToValue(node, GroupMessage.class);
-                case track -> p.getCodec().treeToValue(node, TrackMessage.class);
-                case screen -> p.getCodec().treeToValue(node, ScreenMessage.class);
-                case page -> p.getCodec().treeToValue(node, PageMessage.class);
-                case alias -> p.getCodec().treeToValue(node, AliasMessage.class);
+                case identify -> p.getCodec().treeToValue(node, IdentifyMessageDTO.class);
+                case group -> p.getCodec().treeToValue(node, GroupMessageDTO.class);
+                case track -> p.getCodec().treeToValue(node, TrackMessageDTO.class);
+                case screen -> p.getCodec().treeToValue(node, ScreenMessageDTO.class);
+                case page -> p.getCodec().treeToValue(node, PageMessageDTO.class);
+                case alias -> p.getCodec().treeToValue(node, AliasMessageDTO.class);
             };
         }
     }

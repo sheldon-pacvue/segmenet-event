@@ -15,7 +15,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Accessors(chain = true, fluent = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY) // 自动检测字段
-public final class PageMessage implements Message {
+public final class AliasMessageDTO implements Message {
   private Type type;
   private String messageId;
   private Date sentAt;
@@ -24,7 +24,5 @@ public final class PageMessage implements Message {
   private String anonymousId;
   private String userId;
   private Map<String, Object> integrations;
-  private String name;
-  private Map<String, ?> properties;
-  private String category;
+  private String previousId;
 }

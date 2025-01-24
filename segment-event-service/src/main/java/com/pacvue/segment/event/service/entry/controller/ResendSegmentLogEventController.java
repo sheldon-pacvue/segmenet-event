@@ -1,6 +1,6 @@
 package com.pacvue.segment.event.service.entry.controller;
 
-import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventBody;
+import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
 import com.pacvue.segment.event.service.service.SegmentEventLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ public class ResendSegmentLogEventController {
      * @return 是否成功
      */
     @PostMapping("/resend")
-    public Mono<Boolean> resend(@RequestBody ResendSegmentEventBody body) {
+    public Mono<Boolean> resend(@RequestBody ResendSegmentEventDTO body) {
         log.info("resend {}", body);
         // TODO 这里需要写重发逻辑
         service.resendEventLogs(body);

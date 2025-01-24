@@ -15,7 +15,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Accessors(chain = true, fluent = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY) // 自动检测字段
-public final class IdentifyMessage implements Message {
+public final class IdentifyMessageDTO implements Message {
   private Type type;
   private String messageId;
   private Date sentAt;

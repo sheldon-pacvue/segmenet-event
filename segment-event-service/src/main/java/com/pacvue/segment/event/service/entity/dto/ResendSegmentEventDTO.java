@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.Date;
 
 @Data
-public class ResendSegmentEventBody {
+public class ResendSegmentEventDTO {
     // 是否已经发送成功
     private Boolean result = false;
     // createdAt > from

@@ -1,6 +1,6 @@
 package com.pacvue.segment.event.service.service.impl;
 
-import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventBody;
+import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
 import com.pacvue.segment.event.service.service.SegmentEventLogService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,14 +15,14 @@ class SegmentEventLogServiceImplTest {
 
     @Test
     void getEventLogs() {
-        service.getEventLogs(new ResendSegmentEventBody())
+        service.getEventLogs(new ResendSegmentEventDTO())
                 .doOnNext(System.out::println)
                 .blockLast();
     }
 
     @Test
     void getUnsentEventLogs() {
-        service.resendEventLogs(new ResendSegmentEventBody());
+        service.resendEventLogs(new ResendSegmentEventDTO());
         try {
             TimeUnit.SECONDS.sleep(4);
         } catch (InterruptedException e) {

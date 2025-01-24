@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static com.pacvue.segment.event.service.mapper.table.SegmentEventLogTableDef.SEGMENT_EVENT_LOG;
+import static com.pacvue.segment.event.service.entity.po.table.SegmentEventLogTableDef.SEGMENT_EVENT_LOG;
+
 
 @SpringBootTest
 class SegmentEventLogMapperTest {
