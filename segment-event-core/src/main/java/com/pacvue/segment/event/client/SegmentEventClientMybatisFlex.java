@@ -3,7 +3,6 @@ package com.pacvue.segment.event.client;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.executor.BatchResult;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -11,6 +10,8 @@ import reactor.core.publisher.Mono;
 
 import com.mybatisflex.core.BaseMapper;
 
+import java.sql.Statement;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,7 +30,7 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
     @NonNull
     private final Function<T, D> argumentsConverter;
     @Builder.Default
-    private boolean isSupportValues = false;
+    private boolean isSupportValues = true;
 
     @Override
     public Mono<Boolean> send(List<T> events) {
@@ -42,11 +43,14 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
                         .toList();
                 int result = 0;
                 if (isSupportValues) {
-                    result = mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()), events.size());
+                    result += mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()), events.size());
                 } else {
                     convertedList.forEach(mapper::insert);
                     // 执行批处理并提交
-                    result = sqlSession.flushStatements().size();
+                    result += sqlSession.flushStatements().stream()
+                            .flatMapToInt(br -> Arrays.stream(br.getUpdateCounts())) // 展开所有 updateCounts
+                            .map(uc -> uc == Statement.SUCCESS_NO_INFO ? 1 : uc)     // 处理 SUCCESS_NO_INFO
+                            .reduce(result, Integer::sum);                                // 累加所有值
                 }
                 sqlSession.commit();
                 log.debug("Batch insert completed: {} records inserted", result);
