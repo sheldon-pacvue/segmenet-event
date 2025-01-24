@@ -13,7 +13,7 @@ public class ResendSegmentEventDTO {
     // createdAt > from
     private Date from = DateUtil.offsetDay(new Date(), -2);
     // createAt < to
-    private Date to = new Date();
+    private Date to;
     // 事件类型
     private String type = Message.Type.track.name();
     // 操作类型
