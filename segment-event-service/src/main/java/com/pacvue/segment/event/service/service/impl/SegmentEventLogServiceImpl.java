@@ -29,9 +29,6 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
     @Autowired
     private SegmentIO segmentIO;
 
-    @Autowired
-    private ObjectMapper json;
-
     @Override
     public Flux<SegmentEventLog> getEventLogs(ResendSegmentEventBody body) {
         // 直接使用 Flux.create 创建流，延迟执行
@@ -62,13 +59,8 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
     public void resendEventLogs(ResendSegmentEventBody body) {
         getEventLogs(body)
                 .subscribe(data -> {
-                    try {
-                        Message message = json.readValue(data.getMessage(), Message.class);
-                        log.info("resend message: {}", message.messageId());
-                        segmentIO.message(message);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
+                    log.info("resend message: {}", data.getMessage());
+                    segmentIO.message(data.getMessage());
                 });
     }
 

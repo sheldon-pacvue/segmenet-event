@@ -10,17 +10,25 @@ management:
   endpoint:
     prometheus:
       enabled: true
-
-segment:
-  event:
-    logger:
-      amazon-sqs:
-        region: "us-east-1"
-        queueName: helium10-segment-dev
-        aws-access-key:
-        aws-secret-key:
-    client:
-      analytics:
-        writeKey: cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp
+## Apollo 配置中心
+app.id: ${spring.application.name}
+apollo:
+  meta: https://apollo-configservice-wick-adtomic.pacvue.com
+  cacheDir: /opt/data
+  bootstrap:
+    enabled: true
+    eagerLoad.enabled: true
+    namespaces: application
+## segment 配置
+segment.event:
+  logger:
+    amazon-sqs:
+      region: "us-east-1"
+      queueName: helium10-segment-dev
+      aws-access-key:
+      aws-secret-key:
+  client:
+    analytics:
+      writeKey: cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp
 server:
   port: 8082

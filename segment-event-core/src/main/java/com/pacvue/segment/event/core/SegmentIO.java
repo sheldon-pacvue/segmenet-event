@@ -47,6 +47,10 @@ public final class SegmentIO implements GsonConstant {
         log.info("SegmentIO shutdown");
     }
 
+    public void message(String message) {
+        deliver(buildMessage(gson.fromJson(message, Message.class)));
+    }
+
     public void message(Message message) {
         deliver(buildMessage(message));
     }
