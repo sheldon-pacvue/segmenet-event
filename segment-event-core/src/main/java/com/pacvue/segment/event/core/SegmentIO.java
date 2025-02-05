@@ -48,11 +48,11 @@ public final class SegmentIO implements GsonConstant {
     }
 
     public void message(String message) {
-        deliver(buildMessage(gson.fromJson(message, Message.class)));
+        deliver(interceptMessage(gson.fromJson(message, Message.class)));
     }
 
     public void message(Message message) {
-        deliver(buildMessage(message));
+        deliver(interceptMessage(message));
     }
 
     public void track(SegmentEventGenerator<TrackMessage, TrackMessage.Builder> generator) {
@@ -84,21 +84,18 @@ public final class SegmentIO implements GsonConstant {
     }
 
     public <T extends Message, V extends MessageBuilder<T, V>> Mono<Boolean> deliverReact(SegmentEventGenerator<T, V> generator) {
-        return deliverReact(generator.generate().flatMap(this::buildMessage));
+        return deliverReact(generator.generate().flatMap(this::interceptMessage));
     }
 
-    private <T extends Message> Mono<Boolean> deliverReact(Mono<T> message) {
-        return message
-                .flatMap(reporter::report)
-                .onErrorResume(ex -> {
-                    log.error("deliver failed", ex);
-                    return Mono.just(Boolean.FALSE);
-                })
-                // IO密集型采用Schedulers.boundedElastic
-                .subscribeOn(Schedulers.boundedElastic());
+    public <T extends Message> Mono<Boolean> deliverReact(Mono<T> message) {
+        return message.flatMap(this::deliverReact);
     }
 
-    private <V extends MessageBuilder<?, ?>> Mono<Message> buildMessage(V builder) {
+    public <T extends Message> Mono<Boolean> deliverReact(T message) {
+        return reporter.report(message).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private <V extends MessageBuilder<?, ?>> Mono<Message> interceptMessage(V builder) {
         return Mono.deferContextual(ctx -> Flux.fromIterable(messageTransformers)
                 .flatMap(transformer -> transformer.transform(builder, ctx)
                         .onErrorResume(ex -> {
@@ -112,19 +109,11 @@ public final class SegmentIO implements GsonConstant {
                         log.info("Skipping message {} due to transformer failure.", builder);
                         return Mono.empty();
                     }
-                    Message message = builder.build();
-                    return Flux.fromIterable(messageInterceptors)
-                            .flatMap(interceptor -> interceptor.intercept(message, ctx))
-                            .last(message) // 取最后一个 Message，如果所有 interceptor 都成功
-                            .switchIfEmpty(Mono.error(new RuntimeException("No valid message after interception."))) // 为空时抛出异常
-                            .onErrorResume(ex -> {
-                                log.error("Interceptor failed, skipping message {}.", builder, ex);
-                                return Mono.empty();
-                            });
+                    return interceptMessage(builder.build());
                 }));
     }
 
-    private Mono<Message> buildMessage(Message message) {
+    private Mono<Message> interceptMessage(Message message) {
         return Mono.deferContextual(ctx -> Flux.fromIterable(messageInterceptors)
         .flatMap(interceptor -> interceptor.intercept(message, ctx))
         .last(message) // 取最后一个 Message，如果所有 interceptor 都成功

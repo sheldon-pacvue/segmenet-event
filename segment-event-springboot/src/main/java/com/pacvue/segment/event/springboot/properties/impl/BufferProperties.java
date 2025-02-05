@@ -7,5 +7,5 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class BufferProperties {
     private int bufferSize;
-    private int bufferTimeoutSeconds;
+    private int flushInterval;
 }

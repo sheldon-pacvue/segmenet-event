@@ -1,8 +1,8 @@
 package com.pacvue.segment.event.buffer;
 
 import com.pacvue.segment.event.gson.GsonConstant;
-import com.segment.analytics.messages.Message;
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -13,13 +13,18 @@ public interface Buffer<T> extends GsonConstant {
      * 存入数据
      */
     @NonNull
-    Mono<Boolean> commit(@NonNull T event);
+    Mono<Boolean> submit(@NonNull T event);
 
     /**
-     * 取出数据
+     * 冲刷数据
      */
-    @NonNull
-    StopAccept accept(@NonNull Consumer<List<T>> consumer);
+    void flush();
+
+
+    /**
+     * 订阅数据
+     */
+    StopObserver observer(@NotNull Consumer<List<T>> observer);
 
     /**
      * 优雅关机

@@ -4,10 +4,12 @@ import com.mybatis.flex.reactor.spring.ReactorServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.row.Db;
 import com.pacvue.segment.event.core.SegmentIO;
+import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
 import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
 import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.service.service.SegmentEventLogService;
+import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cursor.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,46 +20,62 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static com.pacvue.segment.event.service.entity.po.table.SegmentEventLogTableDef.SEGMENT_EVENT_LOG;
 
 @Slf4j
 @Service
-public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventLogMapper, SegmentEventLog> implements SegmentEventLogService {
+public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventLogMapper, SegmentEventLog> implements SegmentEventLogService, GsonConstant {
     @Autowired
     private SegmentIO segmentIO;
 
     @Override
     public Flux<SegmentEventLog> getEventLogs(ResendSegmentEventDTO body) {
-        // 直接使用 Flux.create 创建流，延迟执行
-        return Flux.create((FluxSink<SegmentEventLog> fluxSink)  -> {
-            Db.tx(() -> {
-                QueryWrapper queryWrapper = QueryWrapper.create().select()
-                        .where(SEGMENT_EVENT_LOG.RESULT.eq(body.getResult()))
-                        .and(SEGMENT_EVENT_LOG.CREATED_AT.gt(body.getFrom().getTime() / 1000))
-                        .and(SEGMENT_EVENT_LOG.CREATED_AT.lt(body.getTo().getTime() / 1000))
-                        .and(SEGMENT_EVENT_LOG.TYPE.eq(body.getType()))
-                        .and(SEGMENT_EVENT_LOG.OPERATION.eq(body.getOperation()));
-                try (Cursor<SegmentEventLog> logs = mapper.selectCursorByQuery(queryWrapper)) {
-                    for (SegmentEventLog log : logs) {
-                        fluxSink.next(log);  // 逐个发出游标中的数据
+        return Flux.<SegmentEventLog>create(sink -> Db.tx(() -> {
+                    QueryWrapper queryWrapper = QueryWrapper.create().select()
+                            .where(SEGMENT_EVENT_LOG.RESULT.eq(body.getResult()))
+                            .and(SEGMENT_EVENT_LOG.CREATED_AT.gt(body.getFrom().getTime() / 1000))
+                            .and(SEGMENT_EVENT_LOG.CREATED_AT.lt(body.getTo().getTime() / 1000))
+                            .and(SEGMENT_EVENT_LOG.TYPE.eq(body.getType()))
+                            .and(SEGMENT_EVENT_LOG.OPERATION.eq(body.getOperation()));
+
+                    Cursor<SegmentEventLog> logs = mapper.selectCursorByQuery(queryWrapper);
+                    Iterator<SegmentEventLog> iterator = logs.iterator();
+
+                    sink.onDispose(() -> {
+                        try {
+                            logs.close();
+                        } catch (Exception e) {
+                            sink.error(e);
+                        }
+                    });
+
+                    try {
+                        while (iterator.hasNext()) {
+                            SegmentEventLog log = iterator.next();
+                            sink.next(log);
+                        }
+                        sink.complete();
+                    } catch (Exception ex) {
+                        sink.error(ex);
+                        return false;
                     }
-                } catch (Exception e) {
-                    fluxSink.error(e); // 发生异常时通知
-                    return false;
-                } finally {
-                    fluxSink.complete();  // 完成流
-                }
-                return true;
-            });
-        }).subscribeOn(Schedulers.boundedElastic()); // 在专门的线程池中执行阻塞操作
+                    return true;
+                }), FluxSink.OverflowStrategy.BUFFER)
+                .subscribeOn(Schedulers.boundedElastic()); // 让数据库查询在专门的线程池中执行
     }
 
     @Override
     public void resendEventLogs(ResendSegmentEventDTO body) {
+        AtomicInteger i = new AtomicInteger(0);
         getEventLogs(body)
+                .publishOn(Schedulers.boundedElastic())
                 .subscribe(data -> {
-                    log.info("resend message: {}", data.getMessage());
-                    segmentIO.message(data.getMessage());
+                    log.info("count: {}", i.addAndGet(1));
+                    segmentIO.deliverReact(gson.fromJson(data.getMessage(), Message.class)).subscribe();
                 });
     }
 

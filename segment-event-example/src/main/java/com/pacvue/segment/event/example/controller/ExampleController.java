@@ -60,13 +60,14 @@ public class ExampleController {
      */
     @GetMapping("/hello/right2")
     public Mono<String> right2() {
-        return Mono.defer(() -> segmentIO.deliverReact(() -> Mono.deferContextual(ctx -> {
-            ServerWebExchange context = ctx.get(ServerWebExchange.class);
-            String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
-            log.info("userId: {}", userId);
-            return Mono.just(TrackMessage.builder("hello-right2").anonymousId(userId).sentAt(new Date()));
-        })))
-        .flatMap(b -> Mono.just(b.toString()));
+        return Mono.defer(() ->
+                segmentIO.deliverReact(Mono.deferContextual(ctx -> {
+                    ServerWebExchange context = ctx.get(ServerWebExchange.class);
+                    String userId = context.getRequest().getHeaders().getFirst("X-User-ID");
+                    log.info("userId: {}", userId);
+                    return Mono.just(TrackMessage.builder("hello-right2").anonymousId(userId).sentAt(new Date()).build());
+                }))
+                .flatMap(b -> Mono.just(b.toString())));
     }
 
     /**

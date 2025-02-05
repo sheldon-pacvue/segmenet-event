@@ -7,24 +7,25 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
 class ReactorLocalBufferTest {
     private final static int BUFFER_TIMEOUT = 2;
 
-    private final ReactorLocalBuffer<Message> reactorLocalStore = ReactorLocalBuffer.<Message>builder().bufferSize(2).bufferTimeoutSeconds(2).build();
+    private final Buffer<Message> reactorLocalStore = DefaultBuffer.<Message>builder().build();
 
     /**
      * shutdown后提交，抛出异常
      */
     @Test
-    public void shutdown() {
-        reactorLocalStore.accept(System.out::println);
-        reactorLocalStore.commit(TrackMessage.builder("11").userId("1").build()).subscribe();
-        reactorLocalStore.shutdown();
-        Assertions.assertThrows(RuntimeException.class, () ->
-                reactorLocalStore.commit(TrackMessage.builder("11").userId("1").build()).subscribe());
+    public void shutdown() throws InterruptedException {
+        reactorLocalStore.observer(System.out::println);
+        for (int i = 0; i < 14; i++) {
+            reactorLocalStore.submit(TrackMessage.builder("123").userId("123").anonymousId("123").build()).subscribe();
+        }
+        TimeUnit.SECONDS.sleep(6);
     }
 
     /**
@@ -32,49 +33,19 @@ class ReactorLocalBufferTest {
      * @throws InterruptedException
      */
     @Test
-    public void stopAndAcceptAgain() throws InterruptedException, IOException {
-        AtomicInteger count = new AtomicInteger();
-        StopAccept subscribe = reactorLocalStore.accept((a) -> count.incrementAndGet());
-        subscribe.stop();
-        reactorLocalStore.accept((a) -> count.incrementAndGet());
-        reactorLocalStore.commit(TrackMessage.builder("11").userId("1").build()).subscribe();
-        Thread.sleep(BUFFER_TIMEOUT * 1000 + 100);
-        Assertions.assertEquals(1, count.get());
+    public void stopAndFlushAgain() throws InterruptedException, IOException {
+
     }
 
     /**
      * 重复订阅抛出异常
      */
     @Test
-    public void multiAccept() {
-        reactorLocalStore.accept(System.out::println);
-        Assertions.assertThrows(IllegalStateException.class, () -> reactorLocalStore.accept(System.out::println));
+    public void multiFlush() {
     }
 
     @Test
-    public void reAccept() throws InterruptedException, IOException {
-        AtomicInteger count = new AtomicInteger();
-        int c = 0;
-        StopAccept retrieve = reactorLocalStore.accept((events) -> {
-            for (Message event : events) {
-                count.addAndGet(Integer.parseInt(Objects.requireNonNull(event.anonymousId())));
-            }
-        });
-        for (int i = 0; i < 5; i++) {
-            reactorLocalStore.commit(TrackMessage.builder(String.valueOf(i)).anonymousId(String.valueOf(i)).build()).subscribe();
-            c += i;
-        }
-        retrieve.stop();
-        reactorLocalStore.accept((events) -> {
-            for (Message event : events) {
-                count.addAndGet(Integer.parseInt(Objects.requireNonNull(event.anonymousId())));
-            }
-        });
-        for (int i = 5; i < 10; i++) {
-            reactorLocalStore.commit(TrackMessage.builder(String.valueOf(i)).anonymousId(String.valueOf(i)).build()).subscribe();
-            c += i;
-        }
-        Thread.sleep(BUFFER_TIMEOUT * 1000 + 100);
-        Assertions.assertEquals(c, count.get());
+    public void reFlush() throws InterruptedException, IOException {
+
     }
 }

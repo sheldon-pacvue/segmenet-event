@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootTest
 class SegmentEventLogServiceImplTest {
@@ -14,10 +15,12 @@ class SegmentEventLogServiceImplTest {
     private SegmentEventLogService service;
 
     @Test
-    void getEventLogs() {
-        service.getEventLogs(new ResendSegmentEventDTO())
-                .doOnNext(System.out::println)
-                .blockLast();
+    void getEventLogs() throws InterruptedException {
+        ResendSegmentEventDTO resendSegmentEventDTO = new ResendSegmentEventDTO();
+        AtomicInteger i = new AtomicInteger(0);
+        service.getEventLogs(resendSegmentEventDTO)
+                .subscribe(data -> System.out.println("count: " + i.addAndGet(1)));
+        Thread.sleep(100_000);
     }
 
     @Test

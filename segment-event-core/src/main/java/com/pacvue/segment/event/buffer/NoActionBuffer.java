@@ -2,6 +2,7 @@ package com.pacvue.segment.event.buffer;
 
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
@@ -11,18 +12,20 @@ import java.util.function.Consumer;
 
 @Builder
 @Slf4j
-public class NoActionBuffer<T extends Message> extends AbstractBuffer<T> {
-
-    @NotNull
+public class NoActionBuffer<T extends Message> implements Buffer<T> {
     @Override
-    public Mono<Boolean> commit(@NotNull T event) {
-        throw new RuntimeException("don't allow commit");
+    public @NonNull Mono<Boolean> submit(@NonNull T event) {
+        throw new RuntimeException("don't allow submit");
     }
 
-    @NotNull
     @Override
-    protected StopAccept doAccept(@NotNull Consumer<List<T>> consumer) {
-       throw new RuntimeException("don't allow accept");
+    public void flush() {
+        throw new RuntimeException("don't allow flush");
+    }
+
+    @Override
+    public StopObserver observer(@NotNull Consumer<List<T>> observer) {
+        throw new RuntimeException("don't allow observer");
     }
 
     @Override

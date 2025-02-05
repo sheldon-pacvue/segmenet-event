@@ -65,7 +65,7 @@ segment.event:
 mybatis-flex:
   datasource:
     clickhouse:
-      url: jdbc:clickhouse://localhost:18123/default?jdbcCompliant=false
+      url: jdbc:clickhouse://localhost:18123/default?jdbcCompliant=false&autoCommit=true
       username: default
       password: default
       driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
@@ -77,3 +77,12 @@ mybatis-flex:
 ## web配置
 server:
   port: 8081
+## 暴露断点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+  endpoint:
+    prometheus:
+      access: read_only
