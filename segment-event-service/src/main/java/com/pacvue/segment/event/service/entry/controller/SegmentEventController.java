@@ -33,6 +33,6 @@ public class SegmentEventController {
     @PostMapping("/report/log")
     public Mono<Boolean> report(@RequestBody SegmentEventLogMessage message) {
         log.info("{}", message);
-        return service.saveEventLog(SegmentEventLog.fromMessage(message));
+        return service.saveEventLog(new SegmentEventLog().covert(message));
     }
 }

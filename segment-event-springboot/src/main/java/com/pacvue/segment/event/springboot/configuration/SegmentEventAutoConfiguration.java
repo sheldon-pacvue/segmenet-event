@@ -3,7 +3,6 @@ package com.pacvue.segment.event.springboot.configuration;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import com.alibaba.druid.pool.DruidDataSource;
 import com.pacvue.segment.event.buffer.DefaultBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
@@ -30,9 +29,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @Configuration
 @ComponentScan(basePackages = "com.pacvue")
@@ -75,8 +75,7 @@ public class SegmentEventAutoConfiguration {
      *     `createdAt` Int32,
      *     `eventTime` Int32
      * )
-     * ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/SegmentEventsLog',
-     *  '{replica}')
+     * ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/SegmentEventsLog', '{replica}')
      * PARTITION BY toYYYYMM(eventDate)
      * ORDER BY (userId,
      *  eventDate,
@@ -86,25 +85,23 @@ public class SegmentEventAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(name = "segmentEventLogger")
-    public SegmentEventClient<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> loggerProperties) {
+    public SegmentEventClient<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> loggerProperties, Map<String, DataSource> dataSources) {
         LoggerProperties properties = loggerProperties.getIfAvailable(LoggerProperties::new);
-        DataSourceProperties clickhouse = properties.getDatasource();
-        DruidDataSource druidDataSource = new DruidDataSource();
-        druidDataSource.configFromPropeties(clickhouse.getDataSourceProperties());
-
+        DataSourceProperties clickhouse = properties.getDataSource();
         return SegmentEventClientDataSource.<SegmentEventLogMessage>builder()
-                .dataSource(druidDataSource)
+                .dataSource(dataSources.get(clickhouse.getName()))
                 .insertSql(clickhouse.getInsertSql())
+                //TODO 这里需要json序列化
                 .argumentsConverter(event -> new Object[]{
-                        Optional.ofNullable(DateUtil.date(event.eventTime())).map(DateTime::toSqlDate).orElse(null),
-                        DigestUtil.md5Hex(event.toString()),
+                        event.timestamp(),
+                        event.hash(),
                         event.userId(),
                         event.type(),
-                        event.toString(),
-                        event.reported(),
+                        event,
+                        event.result(),
                         event.operation(),
-                        DateUtil.date().getTime() / 1000,
-                        event.eventTime().getTime() / 1000
+                        event.createdAt().getTime() / 1000,
+                        event.timestamp().getTime() / 1000
                 })
                 .build()
                 .buffer(DefaultBuffer.<SegmentEventLogMessage>builder().bufferSize(properties.getBufferSize()).build());
@@ -112,18 +109,19 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentEventReporter segmentEventReporter(@Qualifier("segmentEventClient") SegmentEventClient<Message> segmentEventClient,
-                                                     @Qualifier("segmentEventLogger") SegmentEventClient<SegmentEventLogMessage> segmentEventLogger) {
-        return SegmentEventReporter.builder()
+    public SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
+                                                                             SegmentEventClient<SegmentEventLogMessage> segmentEventLogger) {
+        return SegmentEventReporter.<SegmentEventLogMessage>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
                 .client(segmentEventClient)
+                .logClass(SegmentEventLogMessage.class)
                 .eventLogger(segmentEventLogger)
                 .build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+    public SegmentIO segmentIO(SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter,
                                ObjectProvider<List<ReactorMessageTransformer>> transformers,
                                ObjectProvider<List<ReactorMessageInterceptor>> interceptors) {
         return SegmentIO.builder()

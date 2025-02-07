@@ -57,11 +57,6 @@ public class SegmentEventClientHttp<T> extends AbstractBufferSegmentEventClient<
                 .retry(retry);
     }
 
-    @Override
-    public void flush() {
-
-    }
-
     @Data
     @Accessors(chain = true)
     @NoArgsConstructor

@@ -22,7 +22,7 @@ public class LogMessageRabbitMQConsumer {
     @RabbitHandler
     public void consume(SegmentEventLogMessage message) {
         log.info("log message: {}", message);
-        service.saveEventLog(SegmentEventLog.fromMessage(message))
+        service.saveEventLog(new SegmentEventLog().covert(message))
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
     }

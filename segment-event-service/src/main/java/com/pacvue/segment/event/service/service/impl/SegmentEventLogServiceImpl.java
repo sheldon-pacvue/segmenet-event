@@ -2,7 +2,7 @@ package com.pacvue.segment.event.service.service.impl;
 
 import com.mybatis.flex.reactor.spring.ReactorServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.core.row.Db;
+import com.mybatisflex.core.service.IService;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
@@ -14,14 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cursor.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-
-import java.io.IOException;
-import java.util.Iterator;
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.pacvue.segment.event.service.entity.po.table.SegmentEventLogTableDef.SEGMENT_EVENT_LOG;
@@ -34,39 +35,20 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
 
     @Override
     public Flux<SegmentEventLog> getEventLogs(ResendSegmentEventDTO body) {
-        return Flux.<SegmentEventLog>create(sink -> Db.tx(() -> {
-                    QueryWrapper queryWrapper = QueryWrapper.create().select()
-                            .where(SEGMENT_EVENT_LOG.RESULT.eq(body.getResult()))
-                            .and(SEGMENT_EVENT_LOG.CREATED_AT.gt(body.getFrom().getTime() / 1000))
-                            .and(SEGMENT_EVENT_LOG.CREATED_AT.lt(body.getTo().getTime() / 1000))
-                            .and(SEGMENT_EVENT_LOG.TYPE.eq(body.getType()))
-                            .and(SEGMENT_EVENT_LOG.OPERATION.eq(body.getOperation()));
-
-                    Cursor<SegmentEventLog> logs = mapper.selectCursorByQuery(queryWrapper);
-                    Iterator<SegmentEventLog> iterator = logs.iterator();
-
-                    sink.onDispose(() -> {
-                        try {
-                            logs.close();
-                        } catch (Exception e) {
-                            sink.error(e);
-                        }
-                    });
-
-                    try {
-                        while (iterator.hasNext()) {
-                            SegmentEventLog log = iterator.next();
-                            sink.next(log);
-                        }
-                        sink.complete();
-                    } catch (Exception ex) {
-                        sink.error(ex);
-                        return false;
-                    }
-                    return true;
-                }), FluxSink.OverflowStrategy.BUFFER)
-                .subscribeOn(Schedulers.boundedElastic()); // 让数据库查询在专门的线程池中执行
+        QueryWrapper queryWrapper = QueryWrapper.create().select()
+                .where(SEGMENT_EVENT_LOG.RESULT.eq(body.getResult()))
+                .and(SEGMENT_EVENT_LOG.CREATED_AT.gt(body.getFrom().getTime() / 1000))
+                .and(SEGMENT_EVENT_LOG.CREATED_AT.lt(body.getTo().getTime() / 1000))
+                .and(SEGMENT_EVENT_LOG.TYPE.eq(body.getType()))
+                .and(SEGMENT_EVENT_LOG.OPERATION.eq(body.getOperation()));
+        return list(queryWrapper)
+                .onErrorResume(SQLException.class, (t) -> {
+                    log.warn("查询发生异常，但已忽略: {}", t.getMessage());
+                    return Flux.fromIterable(Collections.emptyList()); // 返回空列表
+                })
+                .subscribeOn(Schedulers.boundedElastic()); // 让查询在独立线程池执行
     }
+
 
     @Override
     public void resendEventLogs(ResendSegmentEventDTO body) {
@@ -75,7 +57,7 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
                 .publishOn(Schedulers.boundedElastic())
                 .subscribe(data -> {
                     log.info("count: {}", i.addAndGet(1));
-                    segmentIO.deliverReact(gson.fromJson(data.getMessage(), Message.class)).subscribe();
+                    segmentIO.deliverReact(data.message()).subscribe();
                 });
     }
 

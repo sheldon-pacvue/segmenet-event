@@ -72,11 +72,6 @@ public class SegmentEventClientAmazonSQS<T> extends AbstractBufferSegmentEventCl
         });
     }
 
-    @Override
-    public void flush() {
-
-    }
-
     public static <T> Builder<T> builder() {
         return new Builder<>();
     }

@@ -15,8 +15,5 @@ public class SegmentEventClientSendReject<T> implements GsonConstant, SegmentEve
     }
 
     @Override
-    public void flush() {
-
-    }
-
+    public void flush() {}
 }

@@ -59,9 +59,4 @@ public class SegmentEventClientMybatisPlus<T, D> extends AbstractBufferSegmentEv
             }
         });
     }
-
-    @Override
-    public void flush() {
-
-    }
 }

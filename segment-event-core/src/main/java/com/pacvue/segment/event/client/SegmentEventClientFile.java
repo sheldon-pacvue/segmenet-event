@@ -42,11 +42,6 @@ public class SegmentEventClientFile<T> extends AbstractBufferSegmentEventClient<
         });
     }
 
-    @Override
-    public void flush() {
-
-    }
-
     private void bundle(boolean focus) {
         // 检查文件大小，如果超过 100MB，则进行滚动压缩
         if (file.length() >= maxFileSizeMb || focus) {

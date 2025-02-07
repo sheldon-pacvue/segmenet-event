@@ -47,12 +47,13 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClient<Message> client,
+    public SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter(SegmentEventClient<Message> client,
                                                      SegmentEventClient<SegmentEventLogMessage> eventLogger,
                                                      MetricsCounter metricsCounter) {
-        return SegmentEventReporter.builder()
+        return SegmentEventReporter.<SegmentEventLogMessage>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
                 .client(client)
+                .logClass(SegmentEventLogMessage.class)
                 .eventLogger(eventLogger)
                 .metricsCounter(metricsCounter)
                 .build();
@@ -67,7 +68,7 @@ public class ServerConfiguration {
 
 
     @Bean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+    public SegmentIO segmentIO(SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter,
                                List<ReactorMessageTransformer> transformers) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)

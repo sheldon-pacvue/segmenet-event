@@ -41,9 +41,4 @@ public class SegmentEventClientRabbit<T> extends AbstractBufferSegmentEventClien
                 .all(success -> success)
                 .defaultIfEmpty(Boolean.TRUE);
     }
-
-    @Override
-    public void flush() {
-
-    }
 }

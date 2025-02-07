@@ -12,6 +12,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -60,11 +61,8 @@ public class SegmentEventClientSocket<T extends Message> extends AbstractBufferS
                     }
                     IoUtil.writeUtf8(socket.getOutputStream(), false, createMessage(events));
                     return true;
-                });
-    }
-
-    @Override
-    public void flush() {
+                })
+                .subscribeOn(Schedulers.boundedElastic()); // 阻塞操作移到专门的线程池
 
     }
 

@@ -20,15 +20,13 @@ import java.util.stream.Collectors;
 
 @Builder
 @Slf4j
-public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEventClient<T, SegmentEventClientMybatisFlex<T, D>> {
+public class SegmentEventClientMybatisFlex<T> extends AbstractBufferSegmentEventClient<T, SegmentEventClientMybatisFlex<T>> {
     @Builder.Default
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     @NonNull
     private final SqlSessionFactory sqlSessionFactory;
     @NonNull
-    private final Class<? extends BaseMapper<D>> mapperClass;
-    @NonNull
-    private final Function<T, D> argumentsConverter;
+    private final Class<? extends BaseMapper<T>> mapperClass;
     @Builder.Default
     private boolean isSupportValues = true;
 
@@ -36,16 +34,12 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
     public Mono<Boolean> send(List<T> events) {
         return Mono.fromCallable(() -> {
             try (SqlSession sqlSession = sqlSessionFactory.openSession(isSupportValues ? ExecutorType.SIMPLE : ExecutorType.BATCH)) {
-                BaseMapper<D> mapper = sqlSession.getMapper(mapperClass);
-
-                List<D> convertedList = events.stream()
-                        .map(argumentsConverter)
-                        .toList();
+                BaseMapper<T> mapper = sqlSession.getMapper(mapperClass);
                 int result = 0;
                 if (isSupportValues) {
-                    result = mapper.insertBatch(events.stream().map(argumentsConverter).collect(Collectors.toList()));
+                    result = mapper.insertBatch(events);
                 } else {
-                    convertedList.forEach(mapper::insert);
+                    events.forEach(mapper::insert);
                     // 执行批处理并提交
                     result = sqlSession.flushStatements().stream()
                             .flatMapToInt(br -> Arrays.stream(br.getUpdateCounts())) // 展开所有 updateCounts
@@ -60,10 +54,5 @@ public class SegmentEventClientMybatisFlex<T, D> extends AbstractBufferSegmentEv
                 return Boolean.FALSE;
             }
         });
-    }
-
-    @Override
-    public void flush() {
-
     }
 }

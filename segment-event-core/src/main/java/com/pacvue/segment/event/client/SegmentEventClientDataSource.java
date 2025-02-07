@@ -6,10 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,11 +49,6 @@ public class SegmentEventClientDataSource<T> extends AbstractBufferSegmentEventC
         });
     }
 
-    @Override
-    public void flush() {
-
-    }
-
     private void setArgument(PreparedStatement preparedStatement, int paramIndex, Object arg) throws SQLException {
         if (arg == null) {
             // 根据实际情况选择合适的类型，默认为 VARCHAR
@@ -80,9 +72,12 @@ public class SegmentEventClientDataSource<T> extends AbstractBufferSegmentEventC
         } else if (arg instanceof java.util.Date) {
             preparedStatement.setTimestamp(paramIndex, new java.sql.Timestamp(((java.util.Date) arg).getTime()));
             log.debug("Parameter {}: {} (Type: Date -> Timestamp)", paramIndex, arg);
+        } else if (arg instanceof Enum<?>) {
+            preparedStatement.setString(paramIndex, ((Enum<?>) arg).name());
+            log.debug("Parameter {}: {} (Type: Enum -> String)", paramIndex, arg);
         } else {
-            // 如果无法推断类型，使用 setObject 作为兜底
-            preparedStatement.setObject(paramIndex, arg);
+            // 如果无法推断类型，使用 setString 作为兜底, 转json格式
+            preparedStatement.setString(paramIndex, gson.toJson(arg));
             log.debug("Parameter {}: {} (Type: Object)", paramIndex, arg);
         }
     }

@@ -20,7 +20,7 @@ public class LogMessageAmazonSQSConsumer {
     @SqsListener("${sqs.log.queue}")  // 消费指定队列的消息
     public void handleMessage(SegmentEventLogMessage message) {
         log.info("Received SQS log message: {}", message);
-        service.saveEventLog(SegmentEventLog.fromMessage(message))
+        service.saveEventLog(new SegmentEventLog().covert(message))
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
     }

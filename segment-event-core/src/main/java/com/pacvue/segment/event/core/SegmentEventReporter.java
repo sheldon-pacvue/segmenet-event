@@ -1,8 +1,7 @@
 package com.pacvue.segment.event.core;
 
-import cn.hutool.crypto.digest.DigestUtil;
 import com.pacvue.segment.event.client.SegmentEventClient;
-import com.pacvue.segment.event.entity.SegmentEventLogMessage;
+import com.pacvue.segment.event.entity.MessageLog;
 import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.segment.analytics.messages.Message;
@@ -21,7 +20,7 @@ import java.util.*;
 @Slf4j
 @Data
 @Builder
-public final class SegmentEventReporter implements GsonConstant {
+public final class SegmentEventReporter<T extends MessageLog<T>> implements GsonConstant {
     /**
      * 这里定义了两种上报操作
      * 如果report是上报给一个异步队列，比如rabbitmq，amazon sqs或者第三方平台，则使用 LOG_OPERATION_SEND_TO_INDIRECT
@@ -36,7 +35,9 @@ public final class SegmentEventReporter implements GsonConstant {
     @NonNull
     private final SegmentEventClient<Message> client;
     @NonNull
-    private final SegmentEventClient<SegmentEventLogMessage> eventLogger;
+    private final Class<T> logClass;
+    @NonNull
+    private final SegmentEventClient<T> eventLogger;
 
     public Mono<Boolean> report(Message... events) {
         return client.send(events)
@@ -71,21 +72,20 @@ public final class SegmentEventReporter implements GsonConstant {
     }
 
     private Mono<Boolean> tryLog(Message event, boolean result) {
-        String message = gson.toJson(event);
-        String hash = DigestUtil.md5Hex(message);
-
-        return eventLogger.send(SegmentEventLogMessage.builder()
-                        .eventTime(event.timestamp())
-                        .message(message)
-                        .userId(event.userId())
-                        .type(event.type().name())
-                        .hash(hash)
-                        .reported(result)
-                        .operation(reportOperation)
-                        .build())
+        T logs = getLogInstance().covert(event).result(result).operation(reportOperation);
+        return eventLogger.send(logs)
                 .onErrorResume(ex -> {
                     log.warn("try log failed, event: {}", event, ex);
                     return Mono.just(Boolean.FALSE);
                 });
+    }
+
+    public T getLogInstance() {
+        try {
+            // 通过无参构造方法创建实例
+            return logClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("get log instance failed");
+        }
     }
 }

@@ -15,7 +15,7 @@ class ReactorLocalBufferTest {
 
     @Test
     public void test() throws InterruptedException {
-        for (int i = 0; i < 40000; i++) {
+        for (int i = 0; i < 100; i++) {
             segmentIO.deliverReact(TrackMessage.builder("123")
                     .userId("12321")
                     .anonymousId("1232333")

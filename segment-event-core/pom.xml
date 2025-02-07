@@ -51,11 +51,6 @@
 
     <dependency>
       <groupId>com.alibaba</groupId>
-      <artifactId>druid</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.alibaba</groupId>
       <artifactId>transmittable-thread-local</artifactId>
     </dependency>
 
@@ -106,6 +101,11 @@
       <artifactId>mybatis-plus-core</artifactId>
       <version>3.5.10.1</version>
       <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
     </dependency>
   </dependencies>
 </project>

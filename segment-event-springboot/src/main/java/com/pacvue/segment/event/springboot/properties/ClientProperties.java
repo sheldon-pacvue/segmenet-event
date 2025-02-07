@@ -21,4 +21,5 @@ public class ClientProperties {
   public SocketProperties socket;
   public AmazonSQSProperties amazonSqs;
   public AnalyticsProperties analytics;
+  public KafkaProperties kafka;
 }

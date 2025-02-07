@@ -1,34 +1,33 @@
 package com.pacvue.segment.event.service.configuration;
 
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.pacvue.segment.event.buffer.DefaultBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
-import com.pacvue.segment.event.client.SegmentEventClientDataSource;
+import com.pacvue.segment.event.client.SegmentEventClientKafka;
 import com.pacvue.segment.event.client.SegmentEventClientMybatisFlex;
 import com.pacvue.segment.event.client.SegmentEventClientSendReject;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
+import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
 import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
-import com.pacvue.segment.event.springboot.properties.impl.DataSourceProperties;
+import com.pacvue.segment.event.springboot.properties.impl.KafkaProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.sql.DataSource;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
 @Configuration
 public class SegmentEventConfiguration {
@@ -47,44 +46,25 @@ public class SegmentEventConfiguration {
     }
 
     @Bean
-    public SegmentEventClientDataSource<SegmentEventLogMessage> segmentEventLogger(ObjectProvider<LoggerProperties> properties, DataSource dataSource) {
+    public SegmentEventClientMybatisFlex<SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties, SqlSessionFactory sessionFactory) {
         LoggerProperties loggerProperties = properties.getIfAvailable(LoggerProperties::new);
-        DataSourceProperties clickhouse = Optional.ofNullable(loggerProperties.getDatasource()).orElseGet(DataSourceProperties::new);
-        SegmentEventClientDataSource<SegmentEventLogMessage> eventLogger = SegmentEventClientDataSource.<SegmentEventLogMessage>builder()
-                .dataSource(dataSource)
-                .insertSql(clickhouse.getInsertSql())
-                .argumentsConverter(event -> new Object[]{
-                        Optional.ofNullable(DateUtil.date(event.eventTime())).map(DateTime::toSqlDate).orElse(null),
-                        DigestUtil.md5Hex(event.message()),
-                        event.userId(),
-                        event.type(),
-                        event.message(),
-                        event.reported(),
-                        event.operation(),
-                        DateUtil.date().getTime() / 1000,
-                        event.eventTime().getTime() / 1000
-                })
+        SegmentEventClientMybatisFlex<SegmentEventLog> eventLogger = SegmentEventClientMybatisFlex.<SegmentEventLog>builder()
+                .sqlSessionFactory(sessionFactory)
+                .mapperClass(SegmentEventLogMapper.class)
+                .isSupportValues(false)
                 .build();
-        if (loggerProperties.getBufferSize() > 0 && loggerProperties.getFlushInterval() > 0) {
-            eventLogger.buffer(DefaultBuffer.<SegmentEventLogMessage>builder().bufferSize(loggerProperties.getBufferSize()).flushInterval(loggerProperties.getFlushInterval()).build());
-        }
+        eventLogger.buffer(DefaultBuffer.<SegmentEventLog>builder()
+                .bufferSize(loggerProperties.getBufferSize())
+                .flushInterval(loggerProperties.getFlushInterval())
+                .build());
         return eventLogger;
     }
 
 //    @Bean
-//    public SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties, SqlSessionFactory sessionFactory) {
-//        LoggerProperties loggerProperties = properties.getIfAvailable(LoggerProperties::new);
-//        SegmentEventClientMybatisFlex<SegmentEventLogMessage, SegmentEventLog> eventLogger = SegmentEventClientMybatisFlex.<SegmentEventLogMessage, SegmentEventLog>builder()
-//                .sqlSessionFactory(sessionFactory)
-//                .mapperClass(SegmentEventLogMapper.class)
-//                .argumentsConverter(SegmentEventLog::fromMessage)
-//                .isSupportValues(false)
-//                .build();
-//        eventLogger.buffer(DefaultBuffer.<SegmentEventLogMessage>builder()
-//                .bufferSize(loggerProperties.getBufferSize())
-//                .flushInterval(loggerProperties.getFlushInterval())
-//                .build());
-//        return eventLogger;
+//    public SegmentEventClientKafka<SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties) {
+//        KafkaProperties kafka = Objects.requireNonNull(properties.getIfAvailable()).getKafka();
+//        return SegmentEventClientKafka.<SegmentEventLog>builder().topic(kafka.getTopic())
+//                .producer(new KafkaProducer<>(kafka.getProperties())).build();
 //    }
 
 
@@ -103,12 +83,13 @@ public class SegmentEventConfiguration {
      * @return 事件上报器
      */
     @Bean
-    public SegmentEventReporter segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
-                                                     SegmentEventClient<SegmentEventLogMessage> segmentEventLogger,
-                                                     MetricsCounter metricsCounter) {
-        return SegmentEventReporter.builder()
+    public SegmentEventReporter<SegmentEventLog> segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
+                                                                      SegmentEventClient<SegmentEventLog> segmentEventLogger,
+                                                                      MetricsCounter metricsCounter) {
+        return SegmentEventReporter.<SegmentEventLog>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
                 .client(segmentEventClient)
+                .logClass(SegmentEventLog.class)
                 .eventLogger(segmentEventLogger)
                 .metricsCounter(metricsCounter)
                 .build();
@@ -122,7 +103,7 @@ public class SegmentEventConfiguration {
      * @return 客户端
      */
     @Bean
-    public SegmentIO segmentIO(SegmentEventReporter segmentEventReporter,
+    public SegmentIO segmentIO(SegmentEventReporter<SegmentEventLog> segmentEventReporter,
                                List<ReactorMessageTransformer> transformers) {
         return SegmentIO.builder()
                 .reporter(segmentEventReporter)

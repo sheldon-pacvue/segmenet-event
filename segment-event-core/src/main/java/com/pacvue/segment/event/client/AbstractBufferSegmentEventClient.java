@@ -12,7 +12,7 @@ import java.util.List;
 
 @Slf4j
 public abstract class AbstractBufferSegmentEventClient<T, C extends AbstractBufferSegmentEventClient<T, C>> implements BufferSegmentEventClient<T, C> {
-    private Buffer<T> buffer = DefaultBuffer.<T>builder().build();
+    protected Buffer<T> buffer = DefaultBuffer.<T>builder().build();
     private StopObserver stopAccept;
 
     protected AbstractBufferSegmentEventClient () {
@@ -54,7 +54,7 @@ public abstract class AbstractBufferSegmentEventClient<T, C extends AbstractBuff
         if (null == this.buffer) {
             return;
         }
-        this.buffer.shutdown();
+        this.buffer.flush();
     }
 
     protected abstract Mono<Boolean> send(List<T> events);
