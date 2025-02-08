@@ -9,6 +9,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Builder
 @Slf4j
@@ -24,7 +25,7 @@ public class NoActionBuffer<T extends Message> implements Buffer<T> {
     }
 
     @Override
-    public StopObserver observer(@NotNull Consumer<List<T>> observer) {
+    public StopObserver observer(@NotNull Function<List<T>, Mono<Boolean>> observer) {
         throw new RuntimeException("don't allow observer");
     }
 

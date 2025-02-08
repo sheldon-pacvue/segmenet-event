@@ -7,6 +7,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public interface Buffer<T> extends GsonConstant {
     /**
@@ -24,7 +25,7 @@ public interface Buffer<T> extends GsonConstant {
     /**
      * 订阅数据
      */
-    StopObserver observer(@NotNull Consumer<List<T>> observer);
+    StopObserver observer(@NotNull Function<List<T>, Mono<Boolean>> observer);
 
     /**
      * 优雅关机

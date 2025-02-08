@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.pacvue.segment.event.service.mapper.SegmentEventLogMapper">
+
+    <!-- 查询所有数据（使用 LIMIT 分页） -->
+    <select id="selectSegmentEventLogByCursor" resultType="com.pacvue.segment.event.service.entity.po.SegmentEventLog">
+        SELECT
+            MAX(eventDate) AS eventDate,
+            hash,
+            MAX(type) AS type,
+            MAX(userId) AS userId,
+            MAX(result) AS result,
+            MAX(message) AS message,
+            MIN(eventTime) AS eventTime
+        FROM (
+            SELECT *
+            FROM SegmentEventLog
+            <where>
+                <if test="from != null">
+                    AND eventDate &gt; toDate(#{from})
+                </if>
+                <if test="to != null">
+                    AND eventDate &lt;= toDate(#{to})
+                </if>
+                <if test="type != null">
+                    AND type = #{type}
+                </if>
+                <if test="operation != null">
+                    AND operation = #{operation}
+                </if>
+                <if test="cursor != null">
+                    <trim prefix="AND (" suffix=")" prefixOverrides="OR">
+                        <if test="cursor.userId != null">
+                            OR userId &gt; #{cursor.userId}
+                        </if>
+                        <if test="cursor.userId != null and cursor.eventDate != null">
+                            OR (userId = #{cursor.userId} AND eventDate &gt; toDate(#{cursor.eventDate}))
+                        </if>
+                        <if test="cursor.userId != null and cursor.eventDate != null and cursor.type != null">
+                            OR (userId = #{cursor.userId} AND eventDate = toDate(#{cursor.eventDate}) AND type &gt; #{cursor.type})
+                        </if>
+                        <if test="cursor.userId != null and cursor.eventDate != null and cursor.type != null and cursor.result != null">
+                            OR (userId = #{cursor.userId} AND eventDate = toDate(#{cursor.eventDate}) AND type = #{cursor.type} AND result &gt; #{cursor.result})
+                        </if>
+                    </trim>
+                </if>
+            </where>
+        )
+        GROUP BY hash
+        <if test="focus == null or focus == false">
+            HAVING result = 0
+        </if>
+        ORDER BY userId, eventDate, type, result
+        LIMIT #{pageSize}
+    </select>
+</mapper>

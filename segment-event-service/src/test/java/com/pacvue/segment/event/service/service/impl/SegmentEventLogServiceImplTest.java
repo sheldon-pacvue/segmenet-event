@@ -17,10 +17,11 @@ class SegmentEventLogServiceImplTest {
     @Test
     void getEventLogs() throws InterruptedException {
         ResendSegmentEventDTO resendSegmentEventDTO = new ResendSegmentEventDTO();
+        resendSegmentEventDTO.setFocus(true);
         AtomicInteger i = new AtomicInteger(0);
         service.getEventLogs(resendSegmentEventDTO)
                 .subscribe(data -> System.out.println("count: " + i.addAndGet(1)));
-        Thread.sleep(100_000);
+        Thread.sleep(10_000);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.pacvue.segment.event.core;
 
+import com.pacvue.segment.event.entity.MessageLog;
 import com.pacvue.segment.event.generator.*;
 import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.metric.MetricsCounter;
@@ -9,6 +10,9 @@ import com.segment.analytics.messages.*;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -19,7 +23,7 @@ import java.util.List;
 @Slf4j
 @Builder
 public final class SegmentIO implements GsonConstant {
-    private final SegmentEventReporter reporter;
+    private final SegmentEventReporter<? extends MessageLog<?>> reporter;
     @Builder.Default
     @NonNull
     private final List<ReactorMessageTransformer> messageTransformers = new ArrayList<>();
@@ -33,6 +37,7 @@ public final class SegmentIO implements GsonConstant {
     public void start() {
         // 分布式仓库中的数据取出后，存入本地buffer仓库，用于批量上报
         log.info("SegmentIO start");
+        reporter.init();
         MetricsCounter metricsCounter = reporter.getMetricsCounter();
         if (null != metricsCounter) {
             log.info("SegmentIO metrics {} started", metricsCounter.getClass().getSimpleName());
@@ -89,6 +94,22 @@ public final class SegmentIO implements GsonConstant {
 
     public <T extends Message> Mono<Boolean> deliverReact(Mono<T> message) {
         return message.flatMap(this::deliverReact);
+    }
+
+    public <T extends Message> void deliverReact(Flux<T> messages) {
+        messages.subscribe(new BaseSubscriber<T>() {
+            @Override
+            protected void hookOnSubscribe(@NotNull Subscription subscription) {
+                request(1);
+            }
+
+            @Override
+            protected void hookOnNext(@NotNull T message) {
+                log.info("message: {}", message);
+                deliverReact(message).block();
+                request(1);
+            }
+        });
     }
 
     public <T extends Message> Mono<Boolean> deliverReact(T message) {

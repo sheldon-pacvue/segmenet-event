@@ -21,7 +21,6 @@ class ReactorLocalBufferTest {
      */
     @Test
     public void shutdown() throws InterruptedException {
-        reactorLocalStore.observer(System.out::println);
         for (int i = 0; i < 14; i++) {
             reactorLocalStore.submit(TrackMessage.builder("123").userId("123").anonymousId("123").build()).subscribe();
         }

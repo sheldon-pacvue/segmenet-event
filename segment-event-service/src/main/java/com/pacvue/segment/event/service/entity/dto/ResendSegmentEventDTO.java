@@ -8,8 +8,8 @@ import java.util.Date;
 
 @Data
 public class ResendSegmentEventDTO {
-    // 是否已经发送成功
-    private Boolean result = false;
+    // 是否强制发送，如果为true，已经发送过的仍然会再次发送
+    private Boolean focus = false;
     // createdAt > from
     private Date from = DateUtil.offsetDay(new Date(), -2);
     // createAt < to
@@ -17,5 +17,5 @@ public class ResendSegmentEventDTO {
     // 事件类型
     private String type = Message.Type.track.name();
     // 操作类型
-    private Short operation;
+    private Integer operation;
 }

@@ -9,7 +9,9 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import reactor.core.publisher.Mono;
 
 import com.mybatisflex.core.BaseMapper;
+import reactor.core.scheduler.Schedulers;
 
+import javax.sql.DataSource;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +48,6 @@ public class SegmentEventClientMybatisFlex<T> extends AbstractBufferSegmentEvent
                             .map(uc -> uc == Statement.SUCCESS_NO_INFO ? 1 : uc)     // 处理 SUCCESS_NO_INFO
                             .reduce(result, Integer::sum);                                // 累加所有值
                 }
-                sqlSession.commit();
                 log.debug("Batch insert completed: {} records inserted", result);
                 return result == events.size();
             } catch (Exception ex) {

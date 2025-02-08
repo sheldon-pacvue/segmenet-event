@@ -3,6 +3,7 @@ package com.pacvue.segment.event.core;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.entity.MessageLog;
 import com.pacvue.segment.event.gson.GsonConstant;
+import com.pacvue.segment.event.helper.MethodConcurrentLimitHelper;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.segment.analytics.messages.Message;
 import lombok.Builder;
@@ -33,15 +34,21 @@ public final class SegmentEventReporter<T extends MessageLog<T>> implements Gson
     @Getter
     private final MetricsCounter metricsCounter;
     @NonNull
-    private final SegmentEventClient<Message> client;
+    private SegmentEventClient<Message> client;
     @NonNull
     private final Class<T> logClass;
     @NonNull
-    private final SegmentEventClient<T> eventLogger;
+    private SegmentEventClient<T> eventLogger;
+
+    @SuppressWarnings("unchecked")
+    public void init() {
+        client = MethodConcurrentLimitHelper.wrap(client, SegmentEventClient.class, "send", 20);
+        eventLogger = MethodConcurrentLimitHelper.wrap(eventLogger, SegmentEventClient.class, "send", 20);
+    }
 
     public Mono<Boolean> report(Message... events) {
         return client.send(events)
-                .doOnSuccess(b -> {
+                .flatMap(b -> {
                     /*
                        事件id是helium10.segmentio.async.send-events
                        内容写入到 @console/runtime/telegraf-metrics.out
@@ -50,9 +57,10 @@ public final class SegmentEventReporter<T extends MessageLog<T>> implements Gson
                      */
                     log.debug("report success, data: {}, result: {}", events, b);
                     Optional.ofNullable(metricsCounter).ifPresent(counter -> counter.inc(events.length));
-                    for (Message event : events) {
-                        tryLog(event, true).subscribe();
-                    }
+                    // 处理所有事件日志，等待全部完成
+                    return Flux.fromArray(events)
+                            .flatMap(event -> tryLog(event, true)) // 并行执行
+                            .all(success -> success); // 所有日志完成后，返回 true
                 })
                 .onErrorResume(throwable -> {
                     log.debug("report failed, switching to single event processing.", throwable);
@@ -62,8 +70,10 @@ public final class SegmentEventReporter<T extends MessageLog<T>> implements Gson
                             .all(success -> success) // 只要有 false 就返回 false
                             .defaultIfEmpty(Boolean.TRUE); // 处理空集合情况;
                 })
+                .doFinally(signalType -> {
+                    log.debug("一批数据结束");
+                })
                 .subscribeOn(Schedulers.boundedElastic());
-
     }
 
     public void flush() {

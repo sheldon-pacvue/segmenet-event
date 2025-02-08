@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.TimeUnit;
+
 @Builder
 @Slf4j
 public class SegmentEventClientSendReject<T> implements GsonConstant, SegmentEventClient<T> {

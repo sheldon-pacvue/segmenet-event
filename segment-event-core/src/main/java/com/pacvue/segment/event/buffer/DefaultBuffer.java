@@ -2,6 +2,7 @@ package com.pacvue.segment.event.buffer;
 
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -12,12 +13,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class DefaultBuffer<T> implements Buffer<T> {
     private final int maxSize; // 缓冲区最大大小
     private final long flushInterval; // 刷新间隔时间（毫秒）
     private final List<T> buffer; // 缓冲区
-    private final List<Consumer<List<T>>> observers; // 观察者列表
+    private final List<Function<List<T>, Mono<Boolean>>> observers; // 观察者列表
     private final ScheduledExecutorService scheduler; // 定时任务调度器
 
     DefaultBuffer(int maxSize, long flushInterval) {
@@ -51,13 +53,14 @@ public class DefaultBuffer<T> implements Buffer<T> {
             if (!buffer.isEmpty()) {
                 List<T> dataToFlush = new ArrayList<>(buffer);
                 buffer.clear();
-                notifyObservers(dataToFlush); // 通知所有观察者
+                // 这里需要等待消费者都消费结束
+                notifyObservers(dataToFlush).block(); // 通知所有观察者
             }
         }
     }
 
     @Override
-    public StopObserver observer(@NotNull Consumer<List<T>> observer) {
+    public StopObserver observer(@NotNull Function<List<T>, Mono<Boolean>> observer) {
         observers.add(observer);
         return () -> observers.remove(observer); // 返回一个取消订阅的函数
     }
@@ -80,10 +83,13 @@ public class DefaultBuffer<T> implements Buffer<T> {
         scheduler.scheduleAtFixedRate(this::flush, flushInterval, flushInterval, TimeUnit.MILLISECONDS);
     }
 
-    private void notifyObservers(List<T> data) {
-        for (Consumer<List<T>> observer : observers) {
-            observer.accept(data);
-        }
+    private Mono<Boolean> notifyObservers(List<T> data) {
+        return Flux.fromIterable(observers)
+                .flatMap(observer -> {
+                    return observer.apply(data);
+                })
+                .all(success -> success)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
 
