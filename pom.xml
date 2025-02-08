@@ -135,6 +135,15 @@
       </dependency>
 
       <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-bom</artifactId>
+        <version>3.5.10.1</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+
+      <dependency>
         <groupId>com.mybatis-flex</groupId>
         <artifactId>mybatis-flex-dependencies</artifactId>
         <version>1.10.5</version>
@@ -163,13 +172,7 @@
       <dependency>
         <groupId>com.clickhouse</groupId>
         <artifactId>clickhouse-jdbc</artifactId>
-        <version>0.7.2</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.alibaba</groupId>
-        <artifactId>druid</artifactId>
-        <version>1.2.22</version>
+        <version>0.8.0</version>
       </dependency>
 
       <dependency>

@@ -2,7 +2,7 @@ package com.pacvue.segment.event.service.entry.sqs;
 
 import io.awspring.cloud.sqs.listener.errorhandler.ErrorHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;

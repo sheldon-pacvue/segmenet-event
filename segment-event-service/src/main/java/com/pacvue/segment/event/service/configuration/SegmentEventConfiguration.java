@@ -1,23 +1,19 @@
 package com.pacvue.segment.event.service.configuration;
 
-import cn.hutool.crypto.digest.DigestUtil;
 import com.pacvue.segment.event.buffer.DefaultBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientKafka;
 import com.pacvue.segment.event.client.SegmentEventClientMybatisFlex;
-import com.pacvue.segment.event.client.SegmentEventClientSendReject;
 import com.pacvue.segment.event.core.SegmentEventReporter;
 import com.pacvue.segment.event.core.SegmentIO;
-import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.extend.ReactorMessageTransformer;
-import com.pacvue.segment.event.gson.GsonConstant;
 import com.pacvue.segment.event.metric.MetricsCounter;
 import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
 import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
+import com.pacvue.segment.event.springboot.properties.ClientProperties;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
-import com.pacvue.segment.event.springboot.properties.impl.KafkaProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -60,18 +56,12 @@ public class SegmentEventConfiguration {
         return eventLogger;
     }
 
-//    @Bean
-//    public SegmentEventClientKafka<SegmentEventLog> segmentEventLogger(ObjectProvider<LoggerProperties> properties) {
-//        KafkaProperties kafka = Objects.requireNonNull(properties.getIfAvailable()).getKafka();
-//        return SegmentEventClientKafka.<SegmentEventLog>builder().topic(kafka.getTopic())
-//                .producer(new KafkaProducer<>(kafka.getProperties())).build();
-//    }
-
-
-
     @Bean
-    public SegmentEventClient<Message> segmentEventClient() {
-        return SegmentEventClientSendReject.<Message>builder().build();
+    public SegmentEventClientKafka<Message> segmentEventClient(ObjectProvider<ClientProperties> properties) {
+        return SegmentEventClientKafka.<Message>builder()
+                .topic(Objects.requireNonNull(properties.getIfAvailable()).getKafka().getTopic())
+                .producer(new KafkaProducer<>(Objects.requireNonNull(properties.getIfAvailable().getKafka()).getProperties()))
+                .build();
     }
 
     /**

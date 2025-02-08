@@ -9,14 +9,9 @@ import com.pacvue.segment.event.service.entity.dto.ResendSegmentEventDTO;
 import com.pacvue.segment.event.service.entity.po.SegmentEventLog;
 import com.pacvue.segment.event.service.mapper.SegmentEventLogMapper;
 import com.pacvue.segment.event.service.service.SegmentEventLogService;
-import com.segment.analytics.messages.Message;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.cursor.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -42,10 +37,6 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
                 .and(SEGMENT_EVENT_LOG.TYPE.eq(body.getType()))
                 .and(SEGMENT_EVENT_LOG.OPERATION.eq(body.getOperation()));
         return list(queryWrapper)
-                .onErrorResume(SQLException.class, (t) -> {
-                    log.warn("查询发生异常，但已忽略: {}", t.getMessage());
-                    return Flux.fromIterable(Collections.emptyList()); // 返回空列表
-                })
                 .subscribeOn(Schedulers.boundedElastic()); // 让查询在独立线程池执行
     }
 
@@ -56,7 +47,6 @@ public class SegmentEventLogServiceImpl extends ReactorServiceImpl<SegmentEventL
         getEventLogs(body)
                 .publishOn(Schedulers.boundedElastic())
                 .subscribe(data -> {
-                    log.info("count: {}", i.addAndGet(1));
                     segmentIO.deliverReact(data.message()).subscribe();
                 });
     }

@@ -99,7 +99,6 @@
     <dependency>
       <groupId>com.baomidou</groupId>
       <artifactId>mybatis-plus-core</artifactId>
-      <version>3.5.10.1</version>
       <optional>true</optional>
     </dependency>
 

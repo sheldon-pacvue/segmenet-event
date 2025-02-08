@@ -1,8 +1,5 @@
 package com.pacvue.segment.event.springboot.configuration;
 
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.crypto.digest.DigestUtil;
 import com.pacvue.segment.event.buffer.DefaultBuffer;
 import com.pacvue.segment.event.client.SegmentEventClient;
 import com.pacvue.segment.event.client.SegmentEventClientAnalytics;
@@ -22,7 +19,6 @@ import com.segment.analytics.messages.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
@@ -91,7 +87,6 @@ public class SegmentEventAutoConfiguration {
         return SegmentEventClientDataSource.<SegmentEventLogMessage>builder()
                 .dataSource(dataSources.get(clickhouse.getName()))
                 .insertSql(clickhouse.getInsertSql())
-                //TODO 这里需要json序列化
                 .argumentsConverter(event -> new Object[]{
                         event.timestamp(),
                         event.hash(),

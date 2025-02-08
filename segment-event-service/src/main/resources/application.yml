@@ -54,15 +54,24 @@ segment.event:
   client:
     analytics:
       writeKey: cVRL2WXtsUB3W7qtaibcO1xYFDxDrIMp
+    kafka:
+      topic: SEGMENT_EVENT_MESSAGE
+      properties:
+        bootstrap:
+          servers: 127.0.0.1:9092
+        key:
+          serializer: org.apache.kafka.common.serialization.StringSerializer
+        value:
+          serializer: org.apache.kafka.common.serialization.StringSerializer
 ## 数据库配置
 mybatis-flex:
   datasource:
     clickhouse:
       type: com.alibaba.druid.pool.DruidDataSource
-      url: jdbc:clickhouse://localhost:18123/default?jdbcCompliant=false
+      url: jdbc:clickhouse://localhost:18123/default
       username: default
       password: default
-      driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+      driver-class-name: com.clickhouse.jdbc.DriverV1
       max-active: 20        # 最大连接数
       initial-size: 5       # 初始连接数
       min-idle: 2           # 最小空闲连接数
