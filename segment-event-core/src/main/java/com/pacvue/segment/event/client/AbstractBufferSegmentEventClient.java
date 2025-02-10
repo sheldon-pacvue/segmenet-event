@@ -25,7 +25,6 @@ public abstract class AbstractBufferSegmentEventClient<T, C extends AbstractBuff
         }
         this.stopAccept = this.buffer.observer(events -> {
             log.debug("accept events: {}", events);
-            // TODO需要判断是否需要阻塞，避免无限多的线程
             return send(events);
         });
     }

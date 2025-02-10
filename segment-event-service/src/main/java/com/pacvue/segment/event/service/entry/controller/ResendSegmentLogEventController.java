@@ -23,7 +23,6 @@ public class ResendSegmentLogEventController {
     @PostMapping("/resend")
     public Mono<Boolean> resend(@RequestBody ResendSegmentEventDTO body) {
         log.info("resend {}", body);
-        // TODO 这里需要写重发逻辑
         service.resendEventLogs(body);
         return Mono.just(Boolean.TRUE);
     }
