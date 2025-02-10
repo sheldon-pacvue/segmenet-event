@@ -14,6 +14,7 @@ import com.pacvue.segment.event.spring.metrics.SpringPrometheusMetricsCounter;
 import com.pacvue.segment.event.springboot.properties.ClientProperties;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
 import com.pacvue.segment.event.springboot.properties.PrometheusMetricsProperties;
+import com.pacvue.segment.event.springboot.properties.ReporterProperties;
 import com.segment.analytics.messages.Message;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -73,14 +74,17 @@ public class SegmentEventConfiguration {
      * @return 事件上报器
      */
     @Bean
-    public SegmentEventReporter<SegmentEventLog> segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
+    public SegmentEventReporter<SegmentEventLog> segmentEventReporter(ReporterProperties properties,
+                                                                      SegmentEventClient<Message> segmentEventClient,
                                                                       SegmentEventClient<SegmentEventLog> segmentEventLogger,
                                                                       MetricsCounter metricsCounter) {
         return SegmentEventReporter.<SegmentEventLog>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
-                .client(segmentEventClient)
+                .sender(segmentEventClient)
+                .senderLimitCount(properties.getSenderLimitCount())
                 .logClass(SegmentEventLog.class)
                 .eventLogger(segmentEventLogger)
+                .loggerLimitCount(properties.getLoggerLimitCount())
                 .metricsCounter(metricsCounter)
                 .build();
     }

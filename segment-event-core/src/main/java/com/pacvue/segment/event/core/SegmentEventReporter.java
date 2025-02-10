@@ -34,20 +34,22 @@ public final class SegmentEventReporter<T extends MessageLog<T>> implements Gson
     @Getter
     private final MetricsCounter metricsCounter;
     @NonNull
-    private SegmentEventClient<Message> client;
+    private SegmentEventClient<Message> sender;
+    private int senderLimitCount;
     @NonNull
     private final Class<T> logClass;
     @NonNull
     private SegmentEventClient<T> eventLogger;
+    private int loggerLimitCount;
 
     @SuppressWarnings("unchecked")
     public void init() {
-        client = MethodConcurrentLimitHelper.wrap(client, SegmentEventClient.class, "send", 20);
-        eventLogger = MethodConcurrentLimitHelper.wrap(eventLogger, SegmentEventClient.class, "send", 20);
+        sender = MethodConcurrentLimitHelper.wrap(sender, SegmentEventClient.class, "send", senderLimitCount);
+        eventLogger = MethodConcurrentLimitHelper.wrap(eventLogger, SegmentEventClient.class, "send", loggerLimitCount);
     }
 
     public Mono<Boolean> report(Message... events) {
-        return client.send(events)
+        return sender.send(events)
                 .flatMap(b -> {
                     /*
                        事件id是helium10.segmentio.async.send-events
@@ -77,7 +79,7 @@ public final class SegmentEventReporter<T extends MessageLog<T>> implements Gson
     }
 
     public void flush() {
-        client.flush();
+        sender.flush();
         eventLogger.flush();
     }
 

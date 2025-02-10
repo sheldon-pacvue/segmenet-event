@@ -52,7 +52,7 @@ public class ServerConfiguration {
                                                      MetricsCounter metricsCounter) {
         return SegmentEventReporter.<SegmentEventLogMessage>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
-                .client(client)
+                .sender(client)
                 .logClass(SegmentEventLogMessage.class)
                 .eventLogger(eventLogger)
                 .metricsCounter(metricsCounter)

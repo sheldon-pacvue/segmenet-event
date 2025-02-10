@@ -9,6 +9,7 @@ import com.pacvue.segment.event.core.SegmentIO;
 import com.pacvue.segment.event.entity.SegmentEventLogMessage;
 import com.pacvue.segment.event.springboot.properties.ClientProperties;
 import com.pacvue.segment.event.springboot.properties.LoggerProperties;
+import com.pacvue.segment.event.springboot.properties.ReporterProperties;
 import com.pacvue.segment.event.springboot.properties.impl.AnalyticsProperties;
 import com.pacvue.segment.event.springboot.properties.impl.DataSourceProperties;
 import com.pacvue.segment.event.extend.ReactorMessageInterceptor;
@@ -104,13 +105,16 @@ public class SegmentEventAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter(SegmentEventClient<Message> segmentEventClient,
+    public SegmentEventReporter<SegmentEventLogMessage> segmentEventReporter(ReporterProperties properties,
+                                                                             SegmentEventClient<Message> segmentEventClient,
                                                                              SegmentEventClient<SegmentEventLogMessage> segmentEventLogger) {
         return SegmentEventReporter.<SegmentEventLogMessage>builder()
                 .reportOperation(SegmentEventReporter.LOG_OPERATION_SEND_TO_DIRECT)
-                .client(segmentEventClient)
+                .sender(segmentEventClient)
+                .senderLimitCount(properties.getSenderLimitCount())
                 .logClass(SegmentEventLogMessage.class)
                 .eventLogger(segmentEventLogger)
+                .loggerLimitCount(properties.getLoggerLimitCount())
                 .build();
     }
 
