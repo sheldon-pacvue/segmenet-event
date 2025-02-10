@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.pacvue.segment.event.service.entity.dto.message.*;
 import com.segment.analytics.messages.Message;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,13 @@ public class JacksonConfig {
         @Override
         public Message deserialize(JsonParser p, DeserializationContext dc) throws IOException {
             JsonNode node = p.getCodec().readTree(p);
+            // 如果 node 是 TextNode，说明是 JSON 字符串
+            if (node instanceof TextNode textNode) {
+                String rawJson = textNode.textValue(); // 获取真正的 JSON 字符串
+                ObjectMapper objectMapper = (ObjectMapper) p.getCodec();
+                node = objectMapper.readTree(rawJson); // 重新解析成 ObjectNode
+            }
+
             String type = node.get("type").asText();
 
             return switch (Message.Type.valueOf(type)) {

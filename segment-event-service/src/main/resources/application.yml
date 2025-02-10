@@ -1,9 +1,9 @@
 ## 自定义配置
 sqs:
   log:
-    queue: helium10-segment-dev
-  message:
 #    queue: helium10-segment-dev
+  message:
+    queue: helium10-segment-dev
 rabbitmq:
   log:
     queue: segment-event-log
@@ -41,9 +41,11 @@ apollo:
 spring.cloud.aws:
   region:
     static: us-east-1
-  credentials:
-    access-key:
-    secret-key:
+  # 敏感信息配置到apollo
+  # credentials:
+    # access-key:
+    # secret-key:
+  endpoint: https://sqs.us-east-1.amazonaws.com
 ## Segment 配置
 segment.event:
   logger:

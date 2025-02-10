@@ -6,6 +6,7 @@ import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 @ConditionalOnProperty(value = "sqs.message.queue")
@@ -16,7 +17,7 @@ public class MessageAmazonSQSConsumer {
     private SegmentIO segmentIO;
 
     @SqsListener("${sqs.message.queue}")  // 消费指定队列的消息
-    public void handleMessage(Message message) {
+    public void handleMessage(@Payload Message message) {
         log.info("Received SQS message: {}", message);
         segmentIO.message(message);
     }
